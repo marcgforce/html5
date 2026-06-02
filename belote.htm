@@ -1,0 +1,1392 @@
+<!DOCTYPE html>
+<html lang="fr"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<title>Belote Coinchée</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Crimson+Text:wght@400;600&display=swap');
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+
+:root{
+  --gd:#143820;--gm:#1d5c35;--gl:#2e8a50;
+  --gold:#c9a84c;--gold-l:#e8c97a;--cream:#f5eed8;
+  /* tailles cartes adaptées mobile */
+  --cw:44px;--ch:66px;    /* main Sud */
+  --cw-s:34px;--ch-s:51px; /* adversaires */
+}
+
+html,body{
+  width:100%;height:100%;
+  overflow:hidden;
+  font-family:'Crimson Text',Georgia,serif;
+  background:#0a1c10;
+  user-select:none;
+  -webkit-tap-highlight-color:transparent;
+  touch-action:manipulation;
+}
+
+/* ── TAPIS DE JEU BUREAU ── */
+@media (min-width:700px){
+  body{
+    background:
+      radial-gradient(ellipse 80% 70% at 50% 50%, #1a2a1a 0%, #0d1a0d 60%, #050d05 100%);
+    display:flex;align-items:center;justify-content:center;
+  }
+
+  /* Cadre bois sombre autour du tapis */
+  body::before{
+    content:'';
+    position:fixed;inset:0;
+    background:
+      repeating-linear-gradient(
+        92deg,
+        rgba(80,45,10,.18) 0px, rgba(80,45,10,.18) 2px,
+        transparent 2px, transparent 18px
+      ),
+      repeating-linear-gradient(
+        2deg,
+        rgba(80,45,10,.12) 0px, rgba(80,45,10,.12) 2px,
+        transparent 2px, transparent 22px
+      ),
+      linear-gradient(160deg, #2a1a08 0%, #1a1005 40%, #0f0a04 100%);
+    z-index:-2;
+  }
+
+  /* Tapis feutré au centre */
+  #table{
+    position:relative;
+    width:min(78vw, 820px);
+    height:min(82vh, 600px);
+    border-radius:clamp(30px, 6vw, 80px);
+    overflow:hidden;
+
+    /* Texture feutre : bruit fin + dégradé vert profond */
+    background:
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='0.07'/%3E%3C/svg%3E"),
+      radial-gradient(ellipse 90% 80% at 50% 48%, #2e7a47 0%, #1d5c35 45%, #143820 80%, #0c2416 100%);
+
+    /* Bordure dorée multi-couche */
+    box-shadow:
+      inset 0 0 0 3px rgba(201,168,76,.85),
+      inset 0 0 0 6px rgba(120,80,20,.4),
+      inset 0 0 0 9px rgba(201,168,76,.15),
+      inset 0 0 60px rgba(0,0,0,.45),
+      0 0 0 12px #2a1a08,
+      0 0 0 14px rgba(201,168,76,.25),
+      0 25px 80px rgba(0,0,0,.9),
+      0 8px 30px rgba(0,0,0,.7);
+  }
+
+  /* Reflet lumineux centré sur le tapis */
+  #table::before{
+    content:'';position:absolute;inset:0;
+    background:
+      radial-gradient(ellipse 70% 55% at 50% 42%, rgba(80,180,100,.10) 0%, transparent 65%),
+      radial-gradient(ellipse 40% 30% at 50% 30%, rgba(255,255,255,.04) 0%, transparent 60%);
+    pointer-events:none;
+    z-index:1;
+  }
+
+  /* Coins dorés décoratifs */
+  #table::after{
+    content:'';position:absolute;inset:0;
+    border-radius:inherit;
+    background:
+      radial-gradient(circle 28px at 4% 4%,   rgba(201,168,76,.55) 0%, transparent 70%),
+      radial-gradient(circle 28px at 96% 4%,   rgba(201,168,76,.55) 0%, transparent 70%),
+      radial-gradient(circle 28px at 4% 96%,   rgba(201,168,76,.55) 0%, transparent 70%),
+      radial-gradient(circle 28px at 96% 96%,  rgba(201,168,76,.55) 0%, transparent 70%);
+    pointer-events:none;
+    z-index:1;
+  }
+
+  /* Agrandir les cartes joueur sur bureau */
+  :root{
+    --cw:56px;--ch:84px;
+    --cw-s:42px;--ch-s:63px;
+  }
+
+  /* Ajustement chevauchement cartes sur bureau */
+  #zone-south .cards-hand .cw{margin-left:-16px;}
+  #zone-north .cards-hand .cw{margin-left:-26px;}
+  #zone-west  .cards-hand .cw{margin-top:-44px;}
+  #zone-east  .cards-hand .cw{margin-top:-44px;}
+  #zone-south .cards-hand{height:calc(var(--ch) + 30px);}
+
+  /* Zone centrale de levée plus grande */
+  #trick-area{
+    width:min(280px,50vw);
+    height:min(200px,35vw);
+  }
+
+  /* Cartes jouées plus grandes sur bureau */
+  .trick-slot{
+    transform-origin:center center;
+    scale:1.45;
+  }
+  /* Réajuster les positions pour compenser le scale */
+  .trick-slot.south{bottom:10px;}
+  .trick-slot.north{top:10px;}
+  .trick-slot.west {left:10px;}
+  .trick-slot.east {right:10px;}
+}
+
+/* ── PLATEAU : plein écran, portrait ── */
+#table{
+  position:relative;
+  width:100dvw; height:100dvh;
+  background:radial-gradient(ellipse 85% 75% at 50% 50%,var(--gl) 0%,var(--gm) 52%,var(--gd) 100%);
+}
+#table::before{
+  content:'';position:absolute;inset:0;
+  background:radial-gradient(ellipse 60% 55% at 50% 50%,rgba(46,138,80,.18) 0%,transparent 70%);
+  pointer-events:none;
+}
+
+/* ── ZONES JOUEURS ── */
+.player-zone{
+  position:absolute;
+  display:flex;flex-direction:column;align-items:center;gap:3px;
+  z-index:10;
+}
+
+/* Sud (humain) — en bas, centré */
+#zone-south{
+  bottom:0;left:0;right:0;
+  flex-direction:column-reverse;
+  padding-bottom:env(safe-area-inset-bottom, 8px);
+  padding-bottom:max(env(safe-area-inset-bottom,0px),8px);
+}
+/* Nord (partenaire) — en haut, centré */
+#zone-north{top:0;left:0;right:0;padding-top:4px;}
+/* Ouest — côté gauche, centré verticalement */
+#zone-west{left:2px;top:50%;transform:translateY(-50%);}
+/* Est — côté droit */
+#zone-east{right:2px;top:50%;transform:translateY(-50%);}
+
+.player-name{
+  font-family:'Playfair Display',serif;font-size:9px;
+  color:var(--gold-l);letter-spacing:.6px;white-space:nowrap;
+  background:rgba(0,0,0,.4);padding:1px 7px;border-radius:6px;
+  text-shadow:1px 1px 3px rgba(0,0,0,.9);
+}
+
+/* ── MAINS ── */
+.cards-hand{display:flex;position:relative;}
+
+/* Sud : horizontale, chevauchement fort */
+#zone-south .cards-hand{
+  flex-direction:row;
+  justify-content:center;
+  height:calc(var(--ch) + 22px); /* place pour le hover */
+  align-items:flex-end;
+}
+#zone-south .cards-hand .cw{margin-left:-14px;}
+#zone-south .cards-hand .cw:first-child{margin-left:0;}
+
+/* Nord : dos horizontaux */
+#zone-north .cards-hand{flex-direction:row;justify-content:center;}
+#zone-north .cards-hand .cw{margin-left:-22px;}
+#zone-north .cards-hand .cw:first-child{margin-left:0;}
+
+/* Ouest / Est : dos verticaux */
+#zone-west  .cards-hand{flex-direction:column;}
+#zone-west  .cards-hand .cw{margin-top:-38px;}
+#zone-west  .cards-hand .cw:first-child{margin-top:0;}
+#zone-east  .cards-hand{flex-direction:column;}
+#zone-east  .cards-hand .cw{margin-top:-38px;}
+#zone-east  .cards-hand .cw:first-child{margin-top:0;}
+
+/* ── ENVELOPPE CARTE ── */
+.cw{
+  position:relative;display:inline-block;
+  transition:transform .15s ease;
+  cursor:default;
+}
+.cw svg{display:block;border-radius:5px;box-shadow:1px 2px 6px rgba(0,0,0,.6);}
+.cw.playable{cursor:pointer;}
+.cw.playable:hover,
+.cw.playable:active{transform:translateY(-20px);z-index:200!important;}
+.cw.playable:active svg{box-shadow:0 8px 22px rgba(0,0,0,.7),0 0 0 2px var(--gold);}
+
+/* ── LEVÉE CENTRALE ── */
+#trick-area{
+  position:absolute;top:50%;left:50%;
+  transform:translate(-50%,-50%);
+  width:min(220px, 55vw);height:min(160px, 40vw);
+  z-index:5;
+}
+.trick-slot{position:absolute;display:flex;align-items:center;justify-content:center;}
+.trick-slot svg{border-radius:4px;box-shadow:1px 2px 8px rgba(0,0,0,.65);}
+.trick-slot.south{bottom:2px;left:50%;transform:translateX(-50%);}
+.trick-slot.north{top:2px;   left:50%;transform:translateX(-50%);}
+.trick-slot.west {left:2px;  top:50%; transform:translateY(-50%);}
+.trick-slot.east {right:2px; top:50%; transform:translateY(-50%);}
+
+/* ── ANIMATIONS PLI ── */
+@keyframes flyToSouth{0%{opacity:1;}100%{transform:translateX(-50%) translateY(180px) scale(.3);opacity:0;}}
+@keyframes flyToNorth{0%{opacity:1;}100%{transform:translateX(-50%) translateY(-180px) scale(.3);opacity:0;}}
+@keyframes flyToWest {0%{opacity:1;}100%{transform:translateY(-50%) translateX(-180px) scale(.3);opacity:0;}}
+@keyframes flyToEast {0%{opacity:1;}100%{transform:translateY(-50%) translateX(180px) scale(.3);opacity:0;}}
+.trick-slot.fly-south svg{animation:flyToSouth .5s ease-in forwards;}
+.trick-slot.fly-north svg{animation:flyToNorth .5s ease-in forwards;}
+.trick-slot.fly-west  svg{animation:flyToWest  .5s ease-in forwards;}
+.trick-slot.fly-east  svg{animation:flyToEast  .5s ease-in forwards;}
+@keyframes cardDrop{from{transform:scale(1.2) translateY(-6px);opacity:.4;}to{transform:scale(1) translateY(0);opacity:1;}}
+.trick-slot svg.card-drop{animation:cardDrop .18s ease-out forwards;}
+
+/* ── HUD : barre inférieure ── */
+#hud-bar{
+  position:absolute;
+  bottom:env(safe-area-inset-bottom,0px);
+  left:0;right:0;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:4px 8px;
+  background:rgba(0,0,0,.35);
+  backdrop-filter:blur(4px);
+  z-index:30;
+  gap:6px;
+}
+#score-board{
+  font-size:11px;color:var(--cream);
+  white-space:nowrap;
+}
+#score-board strong{color:var(--gold-l);font-size:14px;font-family:'Playfair Display',serif;}
+#atout-indicator{
+  font-size:11px;color:var(--cream);
+  white-space:nowrap;flex:1;text-align:center;
+}
+#msg-log{
+  font-size:10px;color:var(--cream);opacity:.8;
+  text-align:right;max-width:120px;
+  overflow:hidden;white-space:nowrap;text-overflow:ellipsis;
+}
+
+/* ── HUD : barre supérieure ── */
+#top-bar{
+  position:absolute;top:0;left:0;right:0;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:4px 8px;padding-top:max(env(safe-area-inset-top,0px),4px);
+  background:rgba(0,0,0,.3);
+  backdrop-filter:blur(3px);
+  z-index:30;gap:6px;
+}
+#contract-info{
+  font-family:'Playfair Display',serif;font-size:11px;
+  color:var(--gold-l);flex:1;text-align:center;
+  white-space:nowrap;
+}
+#trick-count{
+  font-size:10px;color:var(--cream);opacity:.75;
+  white-space:nowrap;
+}
+#help-btn,#debug-btn{
+  font-family:'Crimson Text',serif;font-size:11px;
+  padding:3px 8px;border:1px solid rgba(201,168,76,.4);
+  border-radius:7px;background:rgba(0,0,0,.3);color:var(--cream);
+  cursor:pointer;white-space:nowrap;
+  -webkit-tap-highlight-color:transparent;
+}
+#help-btn:active,#debug-btn:active{background:var(--gold);color:#1a1000;}
+#debug-btn.active{background:rgba(0,100,0,.6);color:#7f7;border-color:rgba(100,255,100,.4);}
+
+/* ── BELOTE MSG ── */
+#belote-msg{
+  position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  color:var(--gold);font-family:'Playfair Display',serif;font-size:26px;
+  text-shadow:0 0 20px rgba(201,168,76,.9);
+  pointer-events:none;opacity:0;transition:opacity .3s;
+  z-index:50;white-space:nowrap;
+}
+
+/* ── ENCART DERNIÈRE MÈNE ── */
+#last-trick-panel{
+  position:absolute;left:8px;
+  top:max(env(safe-area-inset-top,0px) + 30px, 36px);
+  background:rgba(0,0,0,.52);
+  border:1px solid rgba(201,168,76,.3);
+  border-radius:10px;padding:5px 7px;
+  z-index:20;min-width:100px;max-width:120px;
+  backdrop-filter:blur(2px);
+}
+#last-trick-label{
+  font-family:'Playfair Display',serif;font-size:8px;
+  color:var(--gold-l);text-align:center;letter-spacing:.5px;
+  text-transform:uppercase;margin-bottom:3px;opacity:.8;
+}
+#last-trick-winner{
+  font-size:9px;color:var(--cream);text-align:center;
+  margin-bottom:4px;opacity:.75;min-height:12px;
+}
+#last-trick-cards{display:flex;gap:2px;justify-content:center;align-items:center;}
+#last-trick-cards .lt-card{display:flex;flex-direction:column;align-items:center;gap:1px;}
+#last-trick-cards .lt-name{font-size:7px;color:var(--cream);opacity:.6;text-align:center;white-space:nowrap;}
+@keyframes ltFadeIn{from{opacity:0;transform:translateX(-4px);}to{opacity:1;transform:translateX(0);}}
+#last-trick-panel.visible{animation:ltFadeIn .3s ease-out;}
+
+/* ── DEBUG cartes IA ── */
+.cw.debug-face{opacity:.82;}
+#zone-north .cards-hand.debug .cw{margin-left:-18px;}
+#zone-north .cards-hand.debug .cw:first-child{margin-left:0;}
+#zone-west  .cards-hand.debug .cw{margin-top:-40px;}
+#zone-west  .cards-hand.debug .cw:first-child{margin-top:0;}
+#zone-east  .cards-hand.debug .cw{margin-top:-40px;}
+#zone-east  .cards-hand.debug .cw:first-child{margin-top:0;}
+
+.coinche-badge{
+  display:inline-block;padding:1px 5px;border-radius:6px;
+  font-size:9px;font-weight:700;margin-left:3px;vertical-align:middle;
+}
+.coinche-badge.coinche{background:#e67e22;color:#fff;}
+.coinche-badge.surcoinche{background:#c0392b;color:#fff;}
+
+/* ── MODALS / OVERLAYS ── */
+#bid-overlay,#result-overlay,#start-overlay,#rules-overlay{
+  position:fixed;inset:0;
+  background:rgba(6,20,10,.92);
+  display:flex;align-items:center;justify-content:center;
+  z-index:300;backdrop-filter:blur(4px);
+  overflow-y:auto;
+  padding:12px;
+}
+#rules-overlay{display:none;}
+#rules-overlay.visible{display:flex;}
+
+.modal{
+  background:linear-gradient(160deg,#1c3a28,#0e1e14);
+  border:1px solid var(--gold);border-radius:14px;
+  padding:18px 16px;width:100%;max-width:420px;
+  max-height:calc(100dvh - 24px);overflow-y:auto;
+  text-align:center;box-shadow:0 16px 50px rgba(0,0,0,.85);
+}
+.modal h2{font-family:'Playfair Display',serif;color:var(--gold-l);font-size:18px;margin-bottom:6px;}
+.modal p{color:var(--cream);font-size:13px;margin-bottom:10px;line-height:1.5;}
+
+/* Bid history */
+.bid-history{
+  margin:8px 0;font-size:12px;color:var(--cream);
+  max-height:120px;overflow-y:auto;
+  background:rgba(0,0,0,.22);
+  border-radius:8px;padding:5px 3px;text-align:left;
+}
+.bid-table{width:100%;border-collapse:collapse;font-size:11px;}
+.bid-table th{
+  color:var(--gold-l);font-family:'Playfair Display',serif;
+  border-bottom:1px solid rgba(201,168,76,.3);
+  padding:2px 7px;font-weight:600;text-align:left;
+  position:sticky;top:0;background:rgba(14,30,20,.97);
+}
+.bid-table td{padding:2px 7px;border-bottom:1px solid rgba(255,255,255,.04);}
+.bid-row-us td{color:var(--cream);}
+.bid-row-them td{color:rgba(190,190,180,.7);}
+.bid-row-latest td{background:rgba(201,168,76,.08);}
+
+/* Bid buttons : grille compacte */
+.btn-row{display:flex;flex-wrap:wrap;gap:5px;justify-content:center;margin-top:8px;}
+button{
+  font-family:'Crimson Text',serif;font-size:13px;
+  padding:6px 10px;border:1px solid var(--gold);
+  border-radius:7px;background:transparent;color:var(--gold-l);
+  cursor:pointer;transition:background .12s,color .12s;white-space:nowrap;
+  -webkit-tap-highlight-color:transparent;
+  min-height:38px;
+}
+button:active{background:var(--gold);color:#1a1000;}
+button.big{font-size:15px;padding:10px 28px;}
+button.danger{border-color:#e74c3c;color:#f08070;}
+button.danger:active{background:#c0392b;color:#fff;border-color:#c0392b;}
+
+/* Preview main en enchères */
+#bid-hand-preview{
+  display:flex;flex-wrap:wrap;gap:8px;justify-content:center;
+  margin-bottom:10px;background:rgba(0,0,0,.18);border-radius:8px;padding:6px 4px;
+  min-height:60px;align-items:flex-start;
+}
+#bid-countdown{
+  font-family:'Playfair Display',serif;
+  color:var(--gold-l);font-size:11px;
+  text-align:center;margin-bottom:8px;
+  background:rgba(0,0,0,.22);padding:3px 8px;border-radius:7px;
+  display:none;
+}
+
+/* Debug mains dans modal */
+#debug-all-hands{
+  display:none;margin-top:6px;
+  background:rgba(0,80,0,.12);border:1px solid rgba(100,200,100,.2);
+  border-radius:8px;padding:6px 8px;
+}
+#debug-all-hands .dbg-label{
+  font-size:9px;color:rgba(150,220,150,.8);text-align:center;
+  letter-spacing:.6px;text-transform:uppercase;margin-bottom:5px;
+  font-family:'Playfair Display',serif;
+}
+.dbg-player-row{display:flex;align-items:center;gap:4px;margin-bottom:4px;}
+.dbg-player-row:last-child{margin-bottom:0;}
+.dbg-player-name{font-size:9px;color:var(--gold-l);min-width:30px;text-align:right;white-space:nowrap;opacity:.85;}
+.dbg-cards-row{display:flex;flex-wrap:wrap;gap:2px;}
+
+/* Résultat */
+#result-scores{margin:8px 0;font-size:13px;color:var(--cream);}
+
+/* Règles */
+.rules-modal{
+  background:linear-gradient(160deg,#1c3a28,#0e1e14);
+  border:1px solid var(--gold);border-radius:14px;
+  padding:18px 14px;width:100%;max-width:420px;
+  max-height:calc(100dvh - 24px);overflow-y:auto;
+  text-align:left;box-shadow:0 16px 50px rgba(0,0,0,.85);
+}
+.rules-modal h2{font-family:'Playfair Display',serif;color:var(--gold-l);font-size:17px;margin-bottom:10px;text-align:center;}
+.rules-modal h3{font-family:'Playfair Display',serif;color:var(--gold-l);font-size:13px;margin:10px 0 4px;}
+.rules-modal p,.rules-modal li{color:var(--cream);font-size:12px;line-height:1.6;margin-bottom:2px;}
+.rules-modal ul{list-style:none;padding:0;}
+.rules-modal ul li::before{content:'• ';color:var(--gold);}
+.rules-modal table{width:100%;border-collapse:collapse;margin:6px 0;font-size:11px;}
+.rules-modal th{color:var(--gold-l);border-bottom:1px solid rgba(201,168,76,.3);padding:3px 6px;font-weight:600;}
+.rules-modal td{color:var(--cream);padding:3px 6px;border-bottom:1px solid rgba(255,255,255,.04);}
+.rules-modal .section{background:rgba(0,0,0,.18);border-radius:7px;padding:8px 10px;margin-bottom:8px;}
+
+/* ── NOUVEAU UI ENCHÈRES ── */
+#bid-ui{margin-top:6px;}
+
+#amount-chips-container{
+  display:flex;overflow-x:auto;gap:5px;
+  padding:4px 2px 8px;
+  scrollbar-width:none;-webkit-overflow-scrolling:touch;
+}
+#amount-chips-container::-webkit-scrollbar{display:none;}
+
+.amount-chip{
+  flex-shrink:0;padding:5px 12px;
+  border-radius:16px;border:1.5px solid rgba(201,168,76,.35);
+  color:var(--cream);font-family:'Playfair Display',serif;font-size:13px;
+  cursor:pointer;background:rgba(0,0,0,.22);
+  min-height:34px;display:flex;align-items:center;justify-content:center;
+  transition:background .12s,border-color .12s,color .12s;white-space:nowrap;
+}
+.amount-chip.chip-selected{
+  background:var(--gold);border-color:var(--gold);
+  color:#1a1000;font-weight:700;
+  box-shadow:0 2px 8px rgba(201,168,76,.45);
+}
+.amount-chip.chip-disabled{opacity:.28;cursor:default;pointer-events:none;}
+.amount-chip.chip-capot{border-color:rgba(200,70,60,.5);color:#f09090;}
+.amount-chip.chip-capot.chip-selected{background:#a02828;border-color:#c0392b;color:#fff;box-shadow:0 2px 8px rgba(192,57,43,.45);}
+
+#suit-radio-group{
+  display:flex;gap:6px;justify-content:center;margin:2px 0 8px;
+}
+.suit-radio-btn{
+  flex:1;padding:7px 3px;border-radius:10px;
+  border:1.5px solid rgba(201,168,76,.22);background:rgba(0,0,0,.18);
+  display:flex;flex-direction:column;align-items:center;gap:2px;
+  cursor:pointer;transition:all .12s;min-height:52px;justify-content:center;
+}
+.suit-radio-btn .suit-sym{font-size:22px;line-height:1.1;}
+.suit-radio-btn .suit-name{font-size:8px;letter-spacing:.3px;opacity:.55;font-family:'Crimson Text',serif;text-transform:uppercase;}
+.suit-radio-btn.suit-red .suit-sym{color:#e87070;}
+.suit-radio-btn.suit-black .suit-sym{color:var(--cream);}
+.suit-radio-btn.suit-selected{
+  background:rgba(201,168,76,.14);border-color:var(--gold);
+  box-shadow:0 0 10px rgba(201,168,76,.2);
+}
+.suit-radio-btn.suit-selected .suit-name{opacity:.95;}
+
+.bid-action-row{display:flex;flex-direction:column;gap:5px;align-items:center;}
+#bid-confirm-btn{
+  width:100%;padding:11px;
+  background:linear-gradient(135deg,rgba(201,168,76,.22),rgba(201,168,76,.1));
+  border:1.5px solid var(--gold);border-radius:10px;
+  color:var(--gold-l);font-family:'Playfair Display',serif;font-size:15px;
+  cursor:pointer;min-height:46px;letter-spacing:.2px;
+  transition:background .12s,color .12s;
+}
+#bid-confirm-btn:active{background:var(--gold);color:#1a1000;}
+#bid-pass-btn-new{
+  font-family:'Crimson Text',serif;font-size:13px;
+  padding:5px 26px;border:1px solid rgba(201,168,76,.22);
+  border-radius:8px;background:rgba(0,0,0,.16);
+  color:rgba(245,238,216,.5);cursor:pointer;min-height:32px;
+  transition:background .12s,color .12s;
+}
+#bid-pass-btn-new:active{background:rgba(201,168,76,.14);color:var(--cream);}
+</style>
+</head>
+<body>
+
+<div id="table">
+  <!-- Barre haute -->
+  <div id="top-bar">
+    <div id="contract-info"></div>
+    <div id="trick-count"></div>
+    <button id="help-btn" onclick="document.getElementById('rules-overlay').classList.add('visible')">❓</button>
+    <button id="debug-btn" onclick="toggleDebug()">🐛</button>
+  </div>
+
+  <!-- Nord (partenaire) -->
+  <div class="player-zone" id="zone-north">
+    <div class="player-name">Nord — Partenaire</div>
+    <div class="cards-hand" id="hand-north"></div>
+  </div>
+
+  <!-- Ouest (adversaire) -->
+  <div class="player-zone" id="zone-west">
+    <div class="player-name" style="writing-mode:vertical-rl;transform:rotate(180deg);font-size:8px;">Ouest</div>
+    <div class="cards-hand" id="hand-west"></div>
+  </div>
+
+  <!-- Est (adversaire) -->
+  <div class="player-zone" id="zone-east">
+    <div class="cards-hand" id="hand-east"></div>
+    <div class="player-name" style="writing-mode:vertical-rl;font-size:8px;">Est</div>
+  </div>
+
+  <!-- Encart dernière mène -->
+  <div id="last-trick-panel" style="display:none">
+    <div id="last-trick-label">Mène précédente</div>
+    <div id="last-trick-winner"></div>
+    <div id="last-trick-cards"></div>
+  </div>
+
+  <!-- Levée centrale -->
+  <div id="trick-area">
+    <div class="trick-slot south" id="trick-south"></div>
+    <div class="trick-slot north" id="trick-north"></div>
+    <div class="trick-slot west"  id="trick-west"></div>
+    <div class="trick-slot east"  id="trick-east"></div>
+  </div>
+
+  <!-- Belote msg -->
+  <div id="belote-msg"></div>
+
+  <!-- Sud (humain) -->
+  <div class="player-zone" id="zone-south">
+    <div class="player-name">Vous</div>
+    <div class="cards-hand" id="hand-south"></div>
+  </div>
+
+  <!-- Barre basse -->
+  <div id="hud-bar">
+    <div id="score-board">Nous <strong id="score-us">0</strong> — <strong id="score-them">0</strong> Eux</div>
+    <div id="atout-indicator"></div>
+    <div id="msg-log"></div>
+  </div>
+</div>
+
+<!-- OVERLAY DÉMARRAGE -->
+<div id="start-overlay">
+  <div class="modal">
+    <h2>🃏 Belote Coinchée</h2>
+    <p>Vous + Nord contre Ouest + Est<br>
+    <small style="opacity:.7">Premier camp à 1000 points gagne</small></p>
+    <div style="margin:10px 0;font-size:12px;color:var(--cream);opacity:.85;line-height:2;text-align:left;">
+      <b style="color:var(--gold-l)">Règles rapides :</b><br>
+      • Enchères : 80–160, Capot (250)<br>
+      • Coinche ×2 — Surcoinche ×4<br>
+      • Belote-Rebelote (R+D d'atout) = 20 pts<br>
+      • Obligé de fournir, couper et monter
+    </div>
+    <div class="btn-row"><button class="big" onclick="startGame()">Distribuer !</button></div>
+  </div>
+</div>
+
+<!-- OVERLAY ENCHÈRES -->
+<div id="bid-overlay" style="display:none">
+  <div class="modal">
+    <h2>Enchères</h2>
+    <div id="bid-countdown"></div>
+    <div id="bid-hand-preview"></div>
+    <div id="debug-all-hands"></div>
+    <div class="bid-history" id="bid-history-text"></div>
+    <p style="margin:8px 0 3px;font-size:12px;">Votre annonce :</p>
+    <div id="bid-ui">
+      <div id="amount-chips-container"></div>
+      <div id="suit-radio-group"></div>
+      <div class="bid-action-row">
+        <button id="bid-confirm-btn">Annoncer</button>
+        <button id="bid-pass-btn-new">Passe</button>
+      </div>
+    </div>
+    <div id="coinche-buttons" class="btn-row" style="margin-top:6px;display:none"></div>
+  </div>
+</div>
+
+<!-- OVERLAY RÈGLES -->
+<div id="rules-overlay">
+  <div class="rules-modal">
+    <h2>📖 Règles de la Belote Coinchée</h2>
+    <div class="section">
+      <h3>🃏 Le jeu</h3>
+      <ul>
+        <li>32 cartes (du 7 à l'As), 4 joueurs en 2 équipes : Vous + Nord contre Ouest + Est.</li>
+        <li>On joue en 8 levées par donne. Premier camp à <b>1000 points</b> gagne la partie.</li>
+      </ul>
+    </div>
+    <div class="section">
+      <h3>🔢 Valeur des cartes</h3>
+      <table>
+        <tr><th>Carte</th><th>À l'atout</th><th>Hors atout</th></tr>
+        <tr><td>Valet (V)</td><td><b style="color:var(--gold-l)">20 pts</b></td><td>2 pts</td></tr>
+        <tr><td>9</td><td><b style="color:var(--gold-l)">14 pts</b></td><td>0 pt</td></tr>
+        <tr><td>As (A)</td><td>11 pts</td><td>11 pts</td></tr>
+        <tr><td>10</td><td>10 pts</td><td>10 pts</td></tr>
+        <tr><td>Roi (R)</td><td>4 pts</td><td>4 pts</td></tr>
+        <tr><td>Dame (D)</td><td>3 pts</td><td>3 pts</td></tr>
+        <tr><td>8 / 7</td><td>0 pt</td><td>0 pt</td></tr>
+      </table>
+    </div>
+    <div class="section">
+      <h3>🗣️ Les enchères</h3>
+      <ul>
+        <li>Chaque joueur annonce un contrat ou passe.</li>
+        <li>Un contrat = valeur (80–160 ou Capot=250) + couleur d'atout.</li>
+        <li>Enchères closes après 3 passes consécutives.</li>
+      </ul>
+    </div>
+    <div class="section">
+      <h3>⚡ Coinche &amp; Surcoinche</h3>
+      <ul>
+        <li><b style="color:#e67e22">Coinche :</b> un adversaire peut coincher — enjeux ×2.</li>
+        <li><b style="color:#e74c3c">Surcoinche :</b> le camp preneur répond — enjeux ×4.</li>
+      </ul>
+    </div>
+    <div class="section">
+      <h3>🎮 Le jeu de la carte</h3>
+      <ul>
+        <li><b>Fournir :</b> jouer la couleur demandée si on l'a.</li>
+        <li><b>Couper :</b> sinon, couper à l'atout si possible.</li>
+        <li><b>Monter :</b> si on coupe, jouer un atout supérieur.</li>
+        <li>Ordre atout : V > 9 > A > 10 > R > D > 8 > 7</li>
+      </ul>
+    </div>
+    <div class="btn-row" style="margin-top:14px;">
+      <button class="big" onclick="document.getElementById('rules-overlay').classList.remove('visible')">Fermer</button>
+    </div>
+  </div>
+</div>
+
+<!-- OVERLAY RÉSULTAT -->
+<div id="result-overlay" style="display:none">
+  <div class="modal">
+    <h2 id="result-title"></h2>
+    <p id="result-text"></p>
+    <div id="result-scores"></div>
+    <div class="btn-row"><button class="big" onclick="nextDeal()">Donne suivante</button></div>
+  </div>
+</div>
+
+<script>
+/* ================================================================
+   BELOTE COINCHÉE — logique complète (version mobile)
+================================================================ */
+const SUITS=['♠','♥','♦','♣'];
+const RANKS=['7','8','9','J','Q','K','10','A'];
+const RANK_LBL={'7':'7','8':'8','9':'9','J':'V','Q':'D','K':'R','10':'10','A':'A'};
+const RED=new Set(['♥','♦']);
+const VAL_N={'7':0,'8':0,'9':0,'J':2,'Q':3,'K':4,'10':10,'A':11};
+const VAL_T={'7':0,'8':0,'9':14,'J':20,'Q':3,'K':4,'10':10,'A':11};
+const ORD_N={'7':0,'8':1,'9':2,'J':3,'Q':4,'K':5,'10':6,'A':7};
+const ORD_T={'7':0,'8':1,'Q':2,'K':3,'10':4,'A':5,'9':6,'J':7};
+const PLAYERS=['south','west','north','east'];
+const NAMES={south:'Vous',west:'Ouest',north:'Nord',east:'Est'};
+const TEAM={south:0,west:1,north:0,east:1};
+
+let S={};
+let DEBUG_MODE=false;
+
+/* ── Tailles cartes selon écran ── */
+function cardSizes(){
+  const vw=window.innerWidth, vh=window.innerHeight;
+  // cartes Sud : on veut 8 cartes avec chevauchement sur ~80% de la largeur
+  const availW=vw*0.82;
+  // chevauchement à -14px, donc largeur effective = cw + 7*(cw-14) = 8*cw - 7*14
+  // => cw = (availW + 7*14) / 8 ≈ (availW + 98) / 8
+  let cw=Math.round((availW + 98) / 8);
+  cw=Math.max(38, Math.min(54, cw));
+  const ch=Math.round(cw*1.5);
+  const cws=Math.round(cw*0.75);
+  const chs=Math.round(cws*1.5);
+  return {cw,ch,cws,chs};
+}
+
+function initState(){
+  S={
+    hands:{south:[],west:[],north:[],east:[]},
+    dealer:'south',bids:[],contract:null,atout:null,
+    currentTrick:{},trickLeader:null,
+    tricksWon:{0:0,1:0},points:{0:0,1:0},
+    totalScore:{0:0,1:0},
+    phase:'bidding',currentPlayer:null,
+    belotePlayer:null,beloteAnnounced:false,
+    bidPhaseIdx:0,bidOrder:[],
+    lastTrick:null,lastTrickWinner:null,
+  };
+}
+
+/* ── DECK ── */
+function buildDeck(){const d=[];for(const s of SUITS)for(const r of RANKS)d.push({suit:s,rank:r});return d;}
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=0|Math.random()*(i+1);[a[i],a[j]]=[a[j],a[i]];}}
+function deal(){const d=buildDeck();shuffle(d);let i=0;for(const p of PLAYERS){S.hands[p]=d.slice(i,i+8).map(c=>({...c}));i+=8;}}
+
+/* ── VALEURS ── */
+const cVal=(c,t)=>c.suit===t?VAL_T[c.rank]:VAL_N[c.rank];
+const cOrd=(c,t)=>c.suit===t?ORD_T[c.rank]:ORD_N[c.rank];
+
+/* ── SVG ── */
+function svgBack(w=38,h=57){
+  return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg">
+<rect width="${w}" height="${h}" rx="4" fill="#1a3560" stroke="#3060b0" stroke-width="1"/>
+<rect x="2" y="2" width="${w-4}" height="${h-4}" rx="3" fill="none" stroke="rgba(255,255,255,.18)" stroke-width=".7"/>
+<text x="${w/2}" y="${h/2}" text-anchor="middle" dominant-baseline="central"
+  font-size="${Math.round(h*.22)}" fill="rgba(110,160,255,.32)" font-family="serif">✦</text>
+</svg>`;
+}
+
+function svgFace(card,w=54,h=81){
+  const col=RED.has(card.suit)?'#c0392b':'#1a1a2e';
+  const lbl=RANK_LBL[card.rank];
+  const suit=card.suit;
+  const FR=Math.round(h*.13);
+  const FS=Math.round(h*.12);
+  const FC=Math.round(h*.28);
+  const PX=3;const PY=4;
+  const cx=w/2,cy=h/2;
+  return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg">
+<rect width="${w}" height="${h}" rx="5" fill="#fff" stroke="#bbb" stroke-width=".6"/>
+<text x="${PX}" y="${PY+FR}" font-family="Georgia,serif" font-size="${FR}" font-weight="700" fill="${col}">${lbl}</text>
+<text x="${PX}" y="${PY+FR+FS+1}" font-family="Georgia,serif" font-size="${FS}" fill="${col}">${suit}</text>
+<g transform="rotate(180,${cx},${cy})">
+  <text x="${PX}" y="${PY+FR}" font-family="Georgia,serif" font-size="${FR}" font-weight="700" fill="${col}">${lbl}</text>
+  <text x="${PX}" y="${PY+FR+FS+1}" font-family="Georgia,serif" font-size="${FS}" fill="${col}">${suit}</text>
+</g>
+<text x="${cx}" y="${cy}" font-family="Georgia,serif" font-size="${FC}" fill="${col}"
+  text-anchor="middle" dominant-baseline="central">${suit}</text>
+</svg>`;
+}
+
+/* ── AFFICHAGE ── */
+function renderHands(){
+  const {cw,ch,cws,chs}=cardSizes();
+  for(const p of PLAYERS){
+    const el=document.getElementById('hand-'+p);
+    el.innerHTML='';
+    const hand=S.hands[p];
+    if(p==='south'){
+      const sorted=sortHand(hand);
+      const legal=(S.phase==='playing'&&S.currentPlayer==='south')?getLegal('south'):[];
+      // Ajuster le chevauchement pour que les cartes tiennent
+      const overlap=Math.min(14, Math.max(8, Math.floor((sorted.length*cw - window.innerWidth*0.9)/(sorted.length-1||1))));
+      sorted.forEach((card,i)=>{
+        const ok=legal.some(c=>c.suit===card.suit&&c.rank===card.rank);
+        const div=document.createElement('div');
+        div.className='cw'+(ok?' playable':'');
+        div.style.zIndex=i+1;
+        if(i>0) div.style.marginLeft=`-${overlap}px`;
+        div.innerHTML=svgFace(card,cw,ch);
+        if(ok) div.onclick=()=>humanPlay(card);
+        el.appendChild(div);
+      });
+    } else if(DEBUG_MODE){
+      el.classList.add('debug');
+      const sorted=sortHand(hand);
+      const isVert=(p==='west'||p==='east');
+      const dw=isVert?Math.round(cws*.9):Math.round(cws);
+      const dh=Math.round(dw*1.5);
+      const overlapD=isVert?Math.floor(dh*.58):Math.floor(dw*.45);
+      sorted.forEach((card,i)=>{
+        const div=document.createElement('div');
+        div.className='cw debug-face';div.style.zIndex=i+1;
+        if(i>0){
+          if(isVert) div.style.marginTop=`-${overlapD}px`;
+          else div.style.marginLeft=`-${overlapD}px`;
+        }
+        div.innerHTML=svgFace(card,dw,dh);
+        el.appendChild(div);
+      });
+    } else {
+      el.classList.remove('debug');
+      const isVert=(p==='west'||p==='east');
+      const bw=isVert?Math.round(cws*.85):Math.round(cws);
+      const bh=Math.round(bw*1.5);
+      const overlapB=isVert?Math.floor(bh*.58):Math.floor(bw*.45);
+      for(let i=0;i<hand.length;i++){
+        const div=document.createElement('div');
+        div.className='cw';div.style.zIndex=i+1;
+        if(i>0){
+          if(isVert) div.style.marginTop=`-${overlapB}px`;
+          else div.style.marginLeft=`-${overlapB}px`;
+        }
+        div.innerHTML=svgBack(bw,bh);
+        el.appendChild(div);
+      }
+    }
+  }
+}
+
+function sortHand(hand){
+  if(!S.atout) return [...hand];
+  const so=[S.atout,...SUITS.filter(s=>s!==S.atout)];
+  return [...hand].sort((a,b)=>{
+    const d=so.indexOf(a.suit)-so.indexOf(b.suit);
+    if(d!==0)return d;
+    return cOrd(b,S.atout)-cOrd(a,S.atout);
+  });
+}
+
+function renderTrick(){
+  const {cws}=cardSizes();
+  const tw=Math.round(cws*.9),th=Math.round(tw*1.5);
+  for(const p of PLAYERS){
+    const sl=document.getElementById('trick-'+p);
+    const card=S.currentTrick[p];
+    // Ne réécrire que si le contenu change réellement
+    const key=card?card.suit+card.rank:'';
+    if(sl.dataset.cardKey===key)continue;
+    sl.dataset.cardKey=key;
+    if(!card){sl.innerHTML='';continue;}
+    sl.innerHTML=svgFace(card,tw,th);
+    // Déclencher l'animation uniquement sur la carte qui vient d'être posée
+    const svg=sl.querySelector('svg');
+    if(svg){svg.classList.add('card-drop');svg.addEventListener('animationend',()=>svg.classList.remove('card-drop'),{once:true});}
+  }
+}
+
+function renderContractInfo(){
+  const el=document.getElementById('contract-info');
+  const ai=document.getElementById('atout-indicator');
+  if(!S.contract){el.innerHTML='';ai.innerHTML='';return;}
+  const c=S.contract;
+  const badge=c.coinche===1?'<span class="coinche-badge coinche">C</span>':
+               c.coinche===2?'<span class="coinche-badge surcoinche">SC</span>':'';
+  const col=RED.has(c.suit)?'#e87070':'#eee';
+  el.innerHTML=`${TEAM[c.player]===0?'Nous':'Eux'} : ${c.value} <span style="color:${col};font-size:14px">${c.suit}</span>${badge}`;
+  ai.innerHTML=`Atout : <span style="color:${col};font-size:16px;vertical-align:middle">${c.suit}</span>`;
+}
+
+function renderScores(){
+  document.getElementById('score-us').textContent=S.totalScore[0];
+  document.getElementById('score-them').textContent=S.totalScore[1];
+}
+const setMsg=t=>{document.getElementById('msg-log').textContent=t;};
+function showBelote(txt){
+  const el=document.getElementById('belote-msg');
+  el.textContent=txt;el.style.opacity='1';
+  setTimeout(()=>el.style.opacity='0',1800);
+}
+
+/* ── RÈGLES ── */
+function getLegal(player){
+  const hand=S.hands[player],trick=S.currentTrick,atout=S.atout;
+  if(!Object.keys(trick).length) return hand;
+  const ls=trick[S.trickLeader].suit;
+  let best=null,bestP=null;
+  for(const p of PLAYERS){
+    if(!trick[p])continue;
+    if(!best||beats(trick[p],best,ls,atout)){best=trick[p];bestP=p;}
+  }
+  const has=s=>hand.some(c=>c.suit===s);
+  const of=s=>hand.filter(c=>c.suit===s);
+  if(ls===atout){
+    if(!has(atout))return hand;
+    const tr=of(atout);
+    const partnerWinsA=bestP&&TEAM[bestP]===TEAM[player];
+    if(!partnerWinsA){
+      const hi=tr.filter(c=>cOrd(c,atout)>cOrd(best,atout));
+      return hi.length?hi:tr;
+    }
+    return tr;
+  }
+  if(has(ls)) return of(ls);
+  const partnerWins=bestP&&TEAM[bestP]===TEAM[player];
+  if(!partnerWins&&has(atout)){
+    const tr=of(atout);
+    const hi=tr.filter(c=>!best||best.suit!==atout||cOrd(c,atout)>cOrd(best,atout));
+    return hi.length?hi:tr;
+  }
+  return hand;
+}
+
+function beats(c,b,ls,atout){
+  if(c.suit===atout&&b.suit!==atout)return true;
+  if(c.suit!==atout&&b.suit===atout)return false;
+  if(c.suit===b.suit)return cOrd(c,atout)>cOrd(b,atout);
+  return false;
+}
+function trickWinner(){
+  const t=S.currentTrick,ls=t[S.trickLeader].suit;
+  let w=S.trickLeader;
+  for(const p of PLAYERS)if(t[p]&&beats(t[p],t[w],ls,S.atout))w=p;
+  return w;
+}
+function trickPts(){let s=0;for(const p of PLAYERS)if(S.currentTrick[p])s+=cVal(S.currentTrick[p],S.atout);return s;}
+
+/* ── ENCHÈRES ── */
+function startBidding(){
+  S.phase='bidding';S.bids=[];S.contract=null;S.atout=null;
+  const di=PLAYERS.indexOf(S.dealer);
+  S.bidOrder=[...PLAYERS.slice(di+1),...PLAYERS.slice(0,di+1)];
+  S.bidPhaseIdx=0;
+  processBid();
+}
+function processBid(){
+  const bids=S.bids;
+  if(bids.length>=4&&bids.slice(-4).every(b=>b.value===0&&!b.coinche)){
+    setMsg('Tout le monde passe — nouvelle donne.');
+    setTimeout(startNewDeal,1400);return;
+  }
+  if(S.contract){
+    let passes=0;
+    for(let i=bids.length-1;i>=0;i--){if(bids[i].value===0&&!bids[i].coinche)passes++;else break;}
+    if(passes>=(S.contract.coinche>0?2:3)||S.contract.coinche===2){closeBidding();return;}
+  }
+  const player=S.bidOrder[S.bidPhaseIdx%S.bidOrder.length];
+  S.bidPhaseIdx++;
+  if(player==='south')showHumanBidUI();
+  else setTimeout(()=>aiMakeBid(player),620);
+}
+function minBid(){return S.contract?S.contract.value+10:80;}
+
+function showHumanBidUI(){
+  const BID_PREVIEW_MS=3000;
+  const overlay=document.getElementById('bid-overlay');
+
+  const bidsRev=[...S.bids].reverse();
+  let histHtml;
+  if(!S.bids.length){
+    histHtml='<i style="opacity:.5;display:block;text-align:center;padding:4px">Premier à parler</i>';
+  } else {
+    const rows=bidsRev.map((b,idx)=>{
+      const num=S.bids.length-idx;
+      let enchere;
+      if(b.coinche==='coinche')enchere=`<b style="color:#e67e22">Coinche !</b>`;
+      else if(b.coinche==='surcoinche')enchere=`<b style="color:#e74c3c">Surcoinche !</b>`;
+      else if(b.value===0)enchere=`<span style="opacity:.55">Passe</span>`;
+      else{const cl=RED.has(b.suit)?'#e87070':'#eee';enchere=`${b.value} <span style="color:${cl};font-size:13px">${b.suit}</span>`;}
+      const teamLabel=TEAM[b.player]===0?'<span style="color:var(--gold-l);font-size:9px"> ◆</span>':'';
+      const rowCls=(idx===0?'bid-row-latest ':'')+(TEAM[b.player]===0?'bid-row-us':'bid-row-them');
+      return`<tr class="${rowCls}"><td style="opacity:.5;font-size:10px">${num}</td><td>${NAMES[b.player]}${teamLabel}</td><td>${enchere}</td></tr>`;
+    }).join('');
+    histHtml=`<table class="bid-table"><thead><tr><th>#</th><th>Joueur</th><th>Enchère</th></tr></thead><tbody>${rows}</tbody></table>`;
+  }
+  document.getElementById('bid-history-text').innerHTML=histHtml;
+
+  const preview=document.getElementById('bid-hand-preview');
+  preview.innerHTML='';
+  const suitOrder=S.atout?[S.atout,...SUITS.filter(s=>s!==S.atout)]:SUITS;
+  const bysuit={};
+  for(const s of suitOrder)bysuit[s]=[];
+  for(const card of S.hands['south'])bysuit[card.suit].push(card);
+  for(const s of suitOrder){bysuit[s].sort((a,b)=>cOrd(b,S.atout||s)-cOrd(a,S.atout||s));}
+  for(const s of suitOrder){
+    const cards=bysuit[s];
+    if(!cards.length)continue;
+    const suitDiv=document.createElement('div');
+    suitDiv.style.cssText='display:flex;flex-direction:column;align-items:center;gap:2px;';
+    const hdr=document.createElement('div');
+    const suitCol=RED.has(s)?'#e87070':'#ddd';
+    hdr.style.cssText=`font-size:16px;color:${suitCol};line-height:1;`;
+    hdr.textContent=s;
+    suitDiv.appendChild(hdr);
+    const row=document.createElement('div');
+    row.style.cssText='display:flex;gap:2px;';
+    for(const card of cards){
+      const div=document.createElement('div');
+      div.innerHTML=svgFace(card,32,48);
+      row.appendChild(div);
+    }
+    suitDiv.appendChild(row);
+    preview.appendChild(suitDiv);
+  }
+
+  // Debug mains
+  const debugAllEl=document.getElementById('debug-all-hands');
+  if(DEBUG_MODE){
+    debugAllEl.style.display='block';
+    debugAllEl.innerHTML='<div class="dbg-label">🐛 Mains (debug)</div>';
+    for(const {p,label} of [{p:'north',label:'Nord'},{p:'west',label:'Ouest'},{p:'east',label:'Est'}]){
+      const row=document.createElement('div');row.className='dbg-player-row';
+      const nameEl=document.createElement('span');nameEl.className='dbg-player-name';nameEl.textContent=label;
+      row.appendChild(nameEl);
+      const cardsEl=document.createElement('div');cardsEl.className='dbg-cards-row';
+      for(const card of sortHand(S.hands[p])){
+        const d=document.createElement('div');d.innerHTML=svgFace(card,28,42);cardsEl.appendChild(d);
+      }
+      row.appendChild(cardsEl);debugAllEl.appendChild(row);
+    }
+  } else {debugAllEl.style.display='none';}
+
+  const mn=minBid();
+  // Sélection initiale : meilleur atout de la main
+  let bestInitSuit=SUITS[0],bestInitSc=-1;
+  for(const s of SUITS){const sc=evalHand(S.hands['south'],s);if(sc>bestInitSc){bestInitSc=sc;bestInitSuit=s;}}
+  let selVal=(mn<=160)?mn:250;
+  let selSuit=bestInitSuit;
+  const CHIP_VALUES=[80,90,100,110,120,130,140,150,160,250];
+  const SUIT_NAMES={'♠':'Pique','♥':'Cœur','♦':'Carreau','♣':'Trèfle'};
+
+  const chipsEl=document.getElementById('amount-chips-container');
+  const suitEl=document.getElementById('suit-radio-group');
+  const confirmBtn=document.getElementById('bid-confirm-btn');
+  const passBtn2=document.getElementById('bid-pass-btn-new');
+  passBtn2.onclick=()=>humanBid({value:0,player:'south'});
+
+  function mkChips(){
+    chipsEl.innerHTML='';
+    CHIP_VALUES.forEach(v=>{
+      const isCapot=(v===250);
+      const disabled=(v<mn);
+      const chip=document.createElement('div');
+      chip.className='amount-chip'+(isCapot?' chip-capot':'')+(disabled?' chip-disabled':'')+(v===selVal?' chip-selected':'');
+      chip.textContent=isCapot?'Capot':v;
+      chip.dataset.value=v;
+      if(!disabled){
+        chip.onclick=()=>{
+          selVal=v;mkChips();updateConfirm();
+          setTimeout(()=>{const sel=chipsEl.querySelector('.chip-selected');if(sel)sel.scrollIntoView({block:'nearest',inline:'center',behavior:'smooth'});},10);
+        };
+      }
+      chipsEl.appendChild(chip);
+    });
+  }
+
+  function mkSuits(){
+    suitEl.innerHTML='';
+    SUITS.forEach(s=>{
+      const btn=document.createElement('div');
+      const isRed=RED.has(s);
+      btn.className='suit-radio-btn '+(isRed?'suit-red':'suit-black')+(s===selSuit?' suit-selected':'');
+      btn.innerHTML=`<span class="suit-sym">${s}</span><span class="suit-name">${SUIT_NAMES[s]}</span>`;
+      btn.onclick=()=>{selSuit=s;mkSuits();updateConfirm();};
+      suitEl.appendChild(btn);
+    });
+  }
+
+  function updateConfirm(){
+    const valLbl=selVal===250?'Capot':selVal;
+    const cl=RED.has(selSuit)?'#e87070':'#e8c97a';
+    confirmBtn.innerHTML=`Annoncer ${valLbl} <span style="font-size:20px;vertical-align:middle;color:${cl}">${selSuit}</span>`;
+    confirmBtn.onclick=()=>humanBid({value:selVal,suit:selSuit,player:'south'});
+  }
+
+  mkChips();mkSuits();updateConfirm();
+  setTimeout(()=>{const sel=chipsEl.querySelector('.chip-selected');if(sel)sel.scrollIntoView({block:'nearest',inline:'center',behavior:'smooth'});},60);
+
+  const cb=document.getElementById('coinche-buttons');cb.innerHTML='';
+  if(S.contract&&TEAM[S.contract.player]!==TEAM['south']&&S.contract.coinche===0){
+    cb.style.display='flex';
+    const btn=document.createElement('button');btn.className='danger';btn.textContent='Coinche !';
+    btn.onclick=()=>humanBid({coinche:'coinche',player:'south'});cb.appendChild(btn);
+  } else if(S.contract&&TEAM[S.contract.player]===TEAM['south']&&S.contract.coinche===1){
+    cb.style.display='flex';
+    const btn=document.createElement('button');btn.className='danger';btn.textContent='Surcoinche !';
+    btn.onclick=()=>humanBid({coinche:'surcoinche',player:'south'});cb.appendChild(btn);
+  } else cb.style.display='none';
+
+  const countdown=document.getElementById('bid-countdown');
+  let remaining=Math.ceil(BID_PREVIEW_MS/1000);
+  const updateCountdown=()=>{countdown.textContent=`Regardez votre jeu… ouverture dans ${remaining}s`;countdown.style.display='block';};
+  updateCountdown();
+  overlay.style.display='none';
+  setMsg('⏳ C\'est votre tour d\'enchérir !');
+  let timer=setInterval(()=>{
+    remaining--;
+    if(remaining<=0){clearInterval(timer);countdown.style.display='none';overlay.style.display='flex';}
+    else updateCountdown();
+  },1000);
+  setTimeout(()=>{clearInterval(timer);countdown.style.display='none';overlay.style.display='flex';},BID_PREVIEW_MS);
+}
+function humanBid(bid){document.getElementById('bid-overlay').style.display='none';applyBid(bid);}
+function aiMakeBid(player){applyBid(computeAiBid(player));}
+
+function computeAiBid(player){
+  const hand=S.hands[player];
+  const myTeam=TEAM[player];
+  if(S.contract&&TEAM[S.contract.player]!==myTeam&&S.contract.coinche===0){
+    if(evalHand(hand,S.contract.suit)>=95)return{coinche:'coinche',player};
+  }
+  if(S.contract&&TEAM[S.contract.player]===myTeam&&S.contract.coinche===1){
+    if(evalHand(hand,S.contract.suit)>=100)return{coinche:'surcoinche',player};
+  }
+  const mn=minBid();
+  if(mn>160)return{value:0,player};
+  const partnerBid=S.bids.find(b=>b.value>0&&TEAM[b.player]===myTeam);
+  const partnerSuit=partnerBid?partnerBid.suit:null;
+  const enemyBid=S.bids.some(b=>b.value>0&&TEAM[b.player]!==myTeam);
+  if(S.contract&&TEAM[S.contract.player]===myTeam){
+    const cSuit=S.contract.suit;
+    const tc=hand.filter(c=>c.suit===cSuit).length;
+    const pSc=evalHand(hand,cSuit);
+    const hasHonor=hand.some(c=>c.suit===cSuit&&(c.rank==='J'||c.rank==='9'));
+    const canSupport=(tc>=3)||(tc>=2&&hasHonor);
+    if(canSupport&&pSc>=58){const sv=S.contract.value+10;if(sv<=160)return{value:sv,suit:cSuit,player};}
+    return{value:0,player};
+  }
+  let best=null,bestSc=0;
+  for(const s of SUITS){
+    const sc=evalHand(hand,s);
+    const tr=hand.filter(c=>c.suit===s);
+    const hasJ=tr.some(c=>c.rank==='J'),has9=tr.some(c=>c.rank==='9'),hasA=tr.some(c=>c.rank==='A');
+    const qualifies=(tr.length>=3&&(hasJ||has9))||(tr.length>=4)||(tr.length>=2&&hasJ&&hasA);
+    if(qualifies&&sc>bestSc&&sc>=68){bestSc=sc;best=s;}
+  }
+  if(partnerSuit&&best!==partnerSuit){
+    const pSc=evalHand(hand,partnerSuit);
+    const tr=hand.filter(c=>c.suit===partnerSuit);
+    const hasHonor=tr.some(c=>c.rank==='J'||c.rank==='9'||c.rank==='A');
+    if(tr.length>=2&&hasHonor&&pSc>=55&&pSc>bestSc-15){best=partnerSuit;bestSc=pSc;}
+  }
+  if(!best)return{value:0,player};
+  let val=80+Math.floor(Math.max(0,bestSc-75)/8)*10;
+  val=Math.max(mn,Math.min(160,val));
+  const isFirstBidder=S.bids.filter(b=>b.value>0).length===0;
+  if(isFirstBidder&&bestSc<85)val=Math.min(val,80);
+  if(enemyBid&&bestSc<82)val=Math.min(val,mn+10);
+  if(partnerSuit&&best===partnerSuit&&bestSc<80)val=Math.min(val,mn+10);
+  if(val<mn)return{value:0,player};
+  return{value:val,suit:best,player};
+}
+
+function evalHand(hand,suit){
+  let s=0;
+  const tr=hand.filter(c=>c.suit===suit);
+  const nonTr=hand.filter(c=>c.suit!==suit);
+  for(const c of tr)s+=VAL_T[c.rank];
+  for(const c of nonTr)s+=VAL_N[c.rank];
+  if(tr.length>2)s+=(tr.length-2)*4;
+  if(tr.some(c=>c.rank==='J'))s+=8;
+  if(tr.some(c=>c.rank==='9'))s+=4;
+  if(tr.some(c=>c.rank==='J')&&tr.some(c=>c.rank==='9'))s+=6;
+  const suits=new Set(nonTr.map(c=>c.suit));
+  if(suits.size<3)s+=3;
+  return s;
+}
+
+function applyBid(bid){
+  if(bid.coinche==='coinche'){
+    S.contract.coinche=1;S.bids.push({player:bid.player,coinche:'coinche',value:0});
+    setMsg(`${NAMES[bid.player]} : Coinche !`);
+  } else if(bid.coinche==='surcoinche'){
+    S.contract.coinche=2;S.bids.push({player:bid.player,coinche:'surcoinche',value:0});
+    setMsg(`${NAMES[bid.player]} : Surcoinche !`);
+  } else if(bid.value===0){
+    S.bids.push({player:bid.player,value:0});setMsg(`${NAMES[bid.player]} passe`);
+  } else {
+    S.contract={player:bid.player,value:bid.value,suit:bid.suit,coinche:0};
+    S.atout=bid.suit;S.bids.push({player:bid.player,value:bid.value,suit:bid.suit});
+    setMsg(`${NAMES[bid.player]} : ${bid.value} ${bid.suit}`);
+  }
+  renderContractInfo();
+  setTimeout(processBid,360);
+}
+
+function closeBidding(){
+  if(!S.contract){startNewDeal();return;}
+  document.getElementById('bid-overlay').style.display='none';
+  S.phase='playing';
+  const di=PLAYERS.indexOf(S.dealer);
+  S.currentPlayer=PLAYERS[(di+1)%4];S.trickLeader=S.currentPlayer;
+  S.tricksWon={0:0,1:0};S.points={0:0,1:0};
+  S.belotePlayer=findBelote();S.beloteAnnounced=false;
+  renderHands();renderContractInfo();
+  setMsg(`À ${NAMES[S.currentPlayer]} de jouer`);
+  playTurn();
+}
+function findBelote(){
+  for(const p of PLAYERS)
+    if(S.hands[p].some(c=>c.suit===S.atout&&c.rank==='K')&&
+       S.hands[p].some(c=>c.suit===S.atout&&c.rank==='Q'))return p;
+  return null;
+}
+
+/* ── JEU ── */
+function playTurn(){
+  renderHands();renderTrick();
+  document.getElementById('trick-count').textContent=
+    `Lvs — Ns:${S.tricksWon[0]} Eux:${S.tricksWon[1]}`;
+  if(S.currentPlayer!=='south')setTimeout(()=>aiPlay(S.currentPlayer),860);
+}
+function humanPlay(card){
+  if(S.currentPlayer!=='south')return;
+  if(!getLegal('south').some(c=>c.suit===card.suit&&c.rank===card.rank))return;
+  checkBelote('south',card);placeCard('south',card);
+}
+function aiPlay(player){
+  const legal=getLegal(player);
+  const card=chooseCard(player,legal);
+  checkBelote(player,card);placeCard(player,card);
+}
+function chooseCard(player,legal){
+  const t=S.currentTrick,atout=S.atout;
+  const cnt=Object.keys(t).length;
+  const myTeam=TEAM[player];
+  let best=null,bestP=null;
+  for(const p of PLAYERS){
+    if(!t[p])continue;
+    if(!best||beats(t[p],best,t[S.trickLeader].suit,atout)){best=t[p];bestP=p;}
+  }
+  const partnerWins=bestP&&TEAM[bestP]===myTeam;
+  const leadSuit=cnt>0?t[S.trickLeader].suit:null;
+  if(cnt===0){
+    if(S.contract&&TEAM[S.contract.player]===myTeam){
+      const myTrumps=legal.filter(c=>c.suit===atout).sort((a,b)=>cOrd(b,atout)-cOrd(a,atout));
+      if(myTrumps.length>0&&(myTrumps[0].rank==='J'||myTrumps[0].rank==='9'))return myTrumps[0];
+    }
+    const nonTrump=legal.filter(c=>c.suit!==atout);
+    const aces=nonTrump.filter(c=>c.rank==='A'||c.rank==='10');
+    if(aces.length>0)return aces.reduce((a,b)=>cVal(a,atout)>=cVal(b,atout)?a:b);
+    return legal.reduce((a,b)=>cVal(a,atout)<=cVal(b,atout)?a:b);
+  }
+  if(partnerWins){
+    if(cnt===3){
+      const goodDiscard=legal.filter(c=>c.suit!==atout&&(c.rank==='A'||c.rank==='10'));
+      if(goodDiscard.length>0)return goodDiscard[0];
+      return legal.reduce((a,b)=>cVal(a,atout)<=cVal(b,atout)?a:b);
+    }
+    const nonTrump=legal.filter(c=>c.suit!==atout);
+    if(nonTrump.length>0)return nonTrump.reduce((a,b)=>cVal(a,atout)<=cVal(b,atout)?a:b);
+    return legal.reduce((a,b)=>cOrd(a,atout)<=cOrd(b,atout)?a:b);
+  }
+  const win=legal.filter(c=>!best||beats(c,best,leadSuit,atout));
+  if(win.length){
+    const trickValue=trickPts();
+    if(trickValue>=10)return win.reduce((a,b)=>cOrd(b,atout)>cOrd(a,atout)?b:a);
+    const nonTrumpWins=win.filter(c=>c.suit!==atout);
+    if(nonTrumpWins.length>0)return nonTrumpWins.reduce((a,b)=>cVal(a,atout)<=cVal(b,atout)?a:b);
+    const trumpWins=win.filter(c=>c.suit===atout);
+    if(trumpWins.length>0)return trumpWins.reduce((a,b)=>cOrd(a,atout)<=cOrd(b,atout)?a:b);
+    return win.reduce((a,b)=>cVal(a,atout)<=cVal(b,atout)?a:b);
+  }
+  const nonTrump=legal.filter(c=>c.suit!==atout);
+  if(nonTrump.length>0)return nonTrump.reduce((a,b)=>cVal(a,atout)<=cVal(b,atout)?a:b);
+  return legal.reduce((a,b)=>cOrd(a,atout)<=cOrd(b,atout)?a:b);
+}
+function checkBelote(player,card){
+  if(S.belotePlayer!==player||!card||card.suit!==S.atout)return;
+  if(card.rank==='K'||card.rank==='Q'){
+    if(!S.beloteAnnounced){S.beloteAnnounced=true;showBelote(player==='south'?'Belote !':NAMES[player]+' : Belote !');}
+    else showBelote(player==='south'?'Rebelote !':NAMES[player]+' : Rebelote !');
+  }
+}
+function placeCard(player,card){
+  S.hands[player]=S.hands[player].filter(c=>!(c.suit===card.suit&&c.rank===card.rank));
+  S.currentTrick[player]=card;
+  renderHands();renderTrick();
+  setMsg(`${NAMES[player]} : ${RANK_LBL[card.rank]}${card.suit}`);
+  if(Object.keys(S.currentTrick).length===4)setTimeout(resolveTrick,750);
+  else{S.currentPlayer=PLAYERS[(PLAYERS.indexOf(player)+1)%4];setTimeout(playTurn,320);}
+}
+function resolveTrick(){
+  const w=trickWinner(),pts=trickPts(),team=TEAM[w];
+  S.points[team]+=pts;S.tricksWon[team]++;
+  setMsg(`${NAMES[w]} remporte (${pts}pts)`);
+  S.lastTrick={...S.currentTrick};S.lastTrickWinner=w;
+  const flyClass={south:'fly-south',north:'fly-north',west:'fly-west',east:'fly-east'};
+  for(const p of PLAYERS){
+    const sl=document.getElementById('trick-'+p);
+    if(sl&&sl.innerHTML)sl.classList.add(flyClass[w]);
+  }
+  setTimeout(()=>{
+    for(const p of PLAYERS){
+      const sl=document.getElementById('trick-'+p);
+      if(sl){sl.innerHTML='';sl.className='trick-slot '+p;sl.dataset.cardKey='';}
+    }
+    renderLastTrick();
+    S.currentTrick={};S.trickLeader=w;S.currentPlayer=w;
+    if(S.hands['south'].length===0){S.points[team]+=10;setTimeout(computeResult,400);}
+    else{setTimeout(playTurn,300);}
+  },680);
+}
+
+function renderLastTrick(){
+  const panel=document.getElementById('last-trick-panel');
+  if(!S.lastTrick||!S.lastTrickWinner){panel.style.display='none';return;}
+  const wName=NAMES[S.lastTrickWinner];
+  const teamLabel=TEAM[S.lastTrickWinner]===0?'(Ns)':'(Eux)';
+  document.getElementById('last-trick-winner').textContent=`${wName} ${teamLabel}`;
+  const cardsEl=document.getElementById('last-trick-cards');
+  cardsEl.innerHTML='';
+  for(const p of ['south','west','north','east']){
+    const card=S.lastTrick[p];if(!card)continue;
+    const wrap=document.createElement('div');wrap.className='lt-card';
+    wrap.innerHTML=svgFace(card,24,36)+`<span class="lt-name">${NAMES[p][0]}</span>`;
+    if(p===S.lastTrickWinner)wrap.querySelector('svg').style.cssText+='outline:2px solid var(--gold);border-radius:3px;';
+    cardsEl.appendChild(wrap);
+  }
+  panel.style.display='block';
+  panel.classList.remove('visible');
+  void panel.offsetWidth;
+  panel.classList.add('visible');
+}
+
+/* ── RÉSULTAT ── */
+function computeResult(){
+  const c=S.contract,cT=TEAM[c.player],dT=1-cT;
+  const mult=c.coinche===0?1:c.coinche===1?2:4;
+  let belB=0;
+  if(S.belotePlayer){belB=20;S.points[TEAM[S.belotePlayer]]+=20;}
+  const cP=S.points[cT],dP=S.points[dT];
+  const ok=cP>=c.value,capot=S.tricksWon[cT]===8;
+  let su=0,st=0,title,text;
+  if(c.value===250&&capot){
+    title='🏆 Capot !';text=`${NAMES[c.player]} réalise le capot !`;
+    if(cT===0)su=(250+belB)*mult;else st=(250+belB)*mult;
+  } else if(c.value===250&&!capot){
+    title='💥 Capot manqué !';text='Le capot n\'est pas réalisé.';
+    if(cT===0)st=(250+162)*mult;else su=(250+162)*mult;
+  } else if(ok){
+    title='✅ Contrat réussi !';text=`${cP} pts ≥ ${c.value} demandés`;
+    const cp=(cP+belB)*mult,dp=dP*(c.coinche>0?mult:1);
+    if(cT===0){su=cp;st=dp;}else{st=cp;su=dp;}
+  } else {
+    title='❌ Chute !';text=`${cP} pts — contrat de ${c.value} chuté`;
+    const pen=(c.value+162)*mult;
+    if(cT===0)st=pen;else su=pen;
+  }
+  S.totalScore[0]+=su;S.totalScore[1]+=st;
+  renderScores();
+  document.getElementById('result-title').textContent=title;
+  document.getElementById('result-text').textContent=text;
+  document.getElementById('result-scores').innerHTML=
+    `Nous : <b>+${su}</b> pts &nbsp; Eux : <b>+${st}</b> pts<br><br>`+
+    `Total : Nous <b>${S.totalScore[0]}</b> — Eux <b>${S.totalScore[1]}</b>`;
+  if(S.totalScore[0]>=1000||S.totalScore[1]>=1000)
+    document.getElementById('result-title').textContent=
+      '🎉 '+(S.totalScore[0]>=1000?'Vous gagnez !':'Ils gagnent...');
+  document.getElementById('result-overlay').style.display='flex';
+}
+
+/* ── CONTRÔLE ── */
+function startGame(){document.getElementById('start-overlay').style.display='none';initState();startNewDeal();}
+function toggleDebug(){
+  DEBUG_MODE=!DEBUG_MODE;
+  const btn=document.getElementById('debug-btn');
+  btn.classList.toggle('active',DEBUG_MODE);
+  btn.textContent=DEBUG_MODE?'🐛ON':'🐛';
+  renderHands();
+}
+function startNewDeal(){
+  S.currentTrick={};S.trickLeader=null;renderTrick();
+  S.dealer=PLAYERS[(PLAYERS.indexOf(S.dealer||'south')+1)%4];
+  deal();renderHands();renderScores();
+  document.getElementById('atout-indicator').innerHTML='';
+  document.getElementById('contract-info').innerHTML='';
+  document.getElementById('trick-count').textContent='';setMsg('');
+  document.getElementById('last-trick-panel').style.display='none';
+  S.lastTrick=null;S.lastTrickWinner=null;
+  startBidding();
+}
+function nextDeal(){
+  document.getElementById('result-overlay').style.display='none';
+  if(S.totalScore[0]>=1000||S.totalScore[1]>=1000)initState();
+  startNewDeal();
+}
+
+// Recalcul au resize (rotation écran)
+window.addEventListener('resize',()=>{renderHands();renderTrick();});
+</script>
+</body>
+</html>
