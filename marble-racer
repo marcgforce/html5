@@ -1,0 +1,1513 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Marble Race v0.1</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0b0f19; color: #f8fafc; overflow: hidden; height: 100vh; display: flex; flex-direction: column; }
+        header { background: #151d30; border-bottom: 1px solid #2a3754; padding: 8px 16px; display: flex; align-items: center; justify-content: space-between; height: 50px; }
+        .logo { font-weight: 800; font-size: 1.1rem; color: #38bdf8; display: flex; align-items: center; gap: 8px; }
+        .top-controls { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+        button { background: #1e293b; color: #f8fafc; border: 1px solid #334155; padding: 6px 14px; border-radius: 6px; font-size: 0.85rem; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.2s; }
+        button:hover { background: #334155; border-color: #475569; }
+        button.primary { background: #0284c7; border-color: #0369a1; }
+        button.primary:hover { background: #0369a1; }
+        button.success { background: #16a34a; border-color: #15803d; }
+        button.success:hover { background: #15803d; }
+        button.danger { background: #dc2626; border-color: #b91c1c; }
+        button.danger:hover { background: #b91c1c; }
+        button.accent { background: #8b5cf6; border-color: #7c3aed; }
+        button.accent:hover { background: #7c3aed; }
+        
+        .workspace { flex: 1; display: flex; position: relative; overflow: hidden; }
+        .toolbar { width: 250px; background: #151d30; border-right: 1px solid #2a3754; padding: 12px; display: flex; flex-direction: column; gap: 12px; z-index: 10; overflow-y: auto; }
+        .section-title { font-size: 0.75rem; text-transform: uppercase; color: #94a3b8; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 4px; }
+        .tool-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .tool-btn { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 8px 4px; background: #0f172a; border: 1px solid #2a3754; border-radius: 8px; font-size: 0.75rem; gap: 6px; cursor: pointer; color: #cbd5e1; text-align: center; transition: all 0.15s ease; }
+        .tool-btn:hover { border-color: #38bdf8; color: #f8fafc; background: #1e293b; }
+        .tool-btn.active { background: #1e293b; border-color: #38bdf8; color: #38bdf8; box-shadow: 0 0 10px rgba(56, 189, 248, 0.25); }
+        .tool-preview { width: 44px; height: 44px; border-radius: 6px; overflow: hidden; background: #ffffff; border: 1px solid #cbd5e1; }
+        
+        .canvas-container { flex: 1; position: relative; background: #0b0f19; overflow: hidden; }
+        canvas { display: block; width: 100%; height: 100%; cursor: crosshair; }
+        canvas.panning { cursor: grab; }
+        canvas.panning:active { cursor: grabbing; }
+        
+        .leaderboard { width: 280px; background: rgba(21, 29, 48, 0.95); border-left: 1px solid #2a3754; padding: 12px; display: flex; flex-direction: column; z-index: 10; backdrop-filter: blur(8px); }
+        .rank-list { list-style: none; display: flex; flex-direction: column; gap: 6px; margin-top: 8px; overflow-y: auto; flex: 1; }
+        .rank-item { display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; background: #0f172a; border-radius: 6px; border: 1px solid #2a3754; font-size: 0.8rem; }
+        .rank-badge { width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 0.75rem; color: #0f172a; }
+        .rank-stats { display: flex; flex-direction: column; align-items: flex-end; font-family: monospace; font-size: 0.75rem; color: #94a3b8; }
+        .rank-item-wrap { background: #0f172a; border-radius: 6px; border: 1px solid #2a3754; overflow: hidden; }
+        .rank-item-wrap .rank-item { border: 0; border-radius: 0; }
+        .rank-more-btn {
+            border: 0; background: transparent; color: #38bdf8; cursor: pointer;
+            font-size: 1rem; font-weight: bold; padding: 0 4px; line-height: 1;
+        }
+        .rank-more-btn:hover { color: #fff; }
+        .rank-details {
+            display: none; padding: 8px 10px; border-top: 1px solid #2a3754;
+            background: #0b1220; font-size: 0.72rem; color: #cbd5e1;
+            max-height: 210px; overflow-y: auto; font-family: monospace;
+        }
+        .rank-details.open { display: block; }
+        .detail-title { color: #38bdf8; font-weight: bold; margin-bottom: 4px; }
+        .detail-ok { color: #4ade80; }
+        .detail-warn { color: #fbbf24; }
+        .detail-danger { color: #fb7185; }
+        .detail-line { margin: 2px 0; }
+
+
+        .podium-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(11, 15, 25, 0.85); backdrop-filter: blur(8px);
+            display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 200;
+            animation: fadeIn 0.5s ease;
+        }
+        @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+        .podium-card { background: #151d30; border: 1px solid #38bdf8; border-radius: 16px; padding: 24px; width: 500px; text-align: center; box-shadow: 0 20px 40px rgba(0,0,0,0.6); display: flex; flex-direction: column; gap: 16px; }
+        .podium-steps { display: flex; align-items: flex-end; justify-content: center; gap: 12px; margin: 10px 0; height: 180px; }
+        .podium-col { display: flex; flex-direction: column; align-items: center; justify-content: flex-start; width: 120px; border-radius: 8px 8px 0 0; padding: 10px 4px; font-weight: bold; box-shadow: inset 0 2px 5px rgba(255,255,255,0.2); }
+        .podium-1 { background: linear-gradient(to bottom, #fde047, #eab308); height: 155px; color: #0f172a; }
+        .podium-2 { background: linear-gradient(to bottom, #cbd5e1, #94a3b8); height: 125px; color: #0f172a; }
+        .podium-3 { background: linear-gradient(to bottom, #d97706, #b45309); height: 100px; color: #ffffff; }
+        .podium-ball-avatar { width: 28px; height: 28px; border-radius: 50%; border: 2px solid #000; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: bold; color: #000; margin-bottom: 6px; box-shadow: 0 4px 8px rgba(0,0,0,0.3); }
+        .podium-name { font-size: 0.8rem; margin-top: 6px; text-transform: uppercase; letter-spacing: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="logo">🏁 Marble Race <span style="font-size: 0.75rem; color: #94a3b8; font-weight: normal; margin-left: 8px;">v0.1</span></div>
+        <div class="top-controls">
+            <button onclick="exportTrack()">📥 Exporter</button>
+            <button onclick="triggerImport()">📤 Importer</button>
+            <input type="file" id="importInput" accept=".json" style="display: none;" onchange="importTrackFile(event)">
+            <button onclick="centerCameraOnTrack()">🔍 Centrer Vue</button>
+            <button class="accent" onclick="applyAutoSlope()">📐 Ajuster la Pente (Auto)</button>
+            <button onclick="resetAllSlopesTo50()">🔄 Pentes à 50</button>
+            <button class="primary" onclick="startQualifying()">⏱ Qualifications</button>
+            <button id="modeBtn" class="primary" onclick="toggleMode()">▶ Lancer la Course</button>
+            <button onclick="resetRace()">🔄 Réinitialiser</button>
+            <button class="danger" onclick="clearTrack()">🗑 Effacer Tout</button>
+        </div>
+    </header>
+
+    <div class="workspace">
+        <div class="toolbar">
+            <div class="section-title">Navigation & Outils</div>
+            <div class="tool-grid">
+                <div class="tool-btn" id="tool-pan" onclick="selectPiece('pan')">
+                    <svg class="tool-preview" viewBox="0 0 40 40">
+                        <rect width="40" height="40" fill="#ffffff"/>
+                        <path d="M 20 10 L 20 30 M 10 20 L 30 20" stroke="#0284c7" stroke-width="4" stroke-linecap="round"/>
+                    </svg>
+                    <span>Déplacer</span>
+                </div>
+                <div class="tool-btn" id="tool-erase" onclick="selectPiece('erase')">
+                    <svg class="tool-preview" viewBox="0 0 40 40"><rect width="40" height="40" fill="#ffffff"/><path d="M 12 28 L 24 16 L 30 22 L 18 34 Z" fill="#ef4444"/><path d="M 18 34 L 30 22 L 34 26 L 22 38 Z" fill="#64748b"/></svg>
+                    <span>Gomme</span>
+                </div>
+            </div>
+
+            <div class="section-title" style="margin-top: 10px;">Pièces de Piste</div>
+            <div class="tool-grid">
+                <div class="tool-btn active" id="tool-straight_h" onclick="selectPiece('straight_h')">
+                    <svg class="tool-preview" viewBox="0 0 40 40">
+                        <rect width="40" height="40" fill="#ffffff"/><rect y="10" width="40" height="20" fill="#475569"/>
+                        <line x1="0" y1="10" x2="40" y2="10" stroke="#ef4444" stroke-width="2" stroke-dasharray="5,5"/>
+                        <line x1="0" y1="30" x2="40" y2="30" stroke="#ef4444" stroke-width="2" stroke-dasharray="5,5"/>
+                    </svg>
+                    <span>Droite (H)</span>
+                </div>
+                <div class="tool-btn" id="tool-straight_v" onclick="selectPiece('straight_v')">
+                    <svg class="tool-preview" viewBox="0 0 40 40">
+                        <rect width="40" height="40" fill="#ffffff"/><rect x="10" width="20" height="40" fill="#475569"/>
+                        <line x1="10" y1="0" x2="10" y2="40" stroke="#ef4444" stroke-width="2" stroke-dasharray="5,5"/>
+                        <line x1="30" y1="0" x2="30" y2="40" stroke="#ef4444" stroke-width="2" stroke-dasharray="5,5"/>
+                    </svg>
+                    <span>Droite (V)</span>
+                </div>
+                <div class="tool-btn" id="tool-turn_tl" onclick="selectPiece('turn_tl')">
+                    <svg class="tool-preview" viewBox="0 0 40 40"><rect width="40" height="40" fill="#ffffff"/><path d="M 40 10 A 30 30 0 0 0 10 40 L 30 40 A 10 10 0 0 1 40 30 Z" fill="#475569"/></svg>
+                    <span>Virage Haut-G</span>
+                </div>
+                <div class="tool-btn" id="tool-turn_tr" onclick="selectPiece('turn_tr')">
+                    <svg class="tool-preview" viewBox="0 0 40 40"><rect width="40" height="40" fill="#ffffff"/><path d="M 0 10 A 30 30 0 0 1 30 40 L 10 40 A 10 10 0 0 0 0 30 Z" fill="#475569"/></svg>
+                    <span>Virage Haut-D</span>
+                </div>
+                <div class="tool-btn" id="tool-turn_bl" onclick="selectPiece('turn_bl')">
+                    <svg class="tool-preview" viewBox="0 0 40 40"><rect width="40" height="40" fill="#ffffff"/><path d="M 40 30 A 30 30 0 0 1 10 0 L 30 0 A 10 10 0 0 0 40 10 Z" fill="#475569"/></svg>
+                    <span>Virage Bas-G</span>
+                </div>
+                <div class="tool-btn" id="tool-turn_br" onclick="selectPiece('turn_br')">
+                    <svg class="tool-preview" viewBox="0 0 40 40"><rect width="40" height="40" fill="#ffffff"/><path d="M 0 30 A 30 30 0 0 0 30 0 L 10 0 A 10 10 0 0 1 0 10 Z" fill="#475569"/></svg>
+                    <span>Virage Bas-D</span>
+                </div>
+                <div class="tool-btn" id="tool-cross" onclick="selectPiece('cross')">
+                    <svg class="tool-preview" viewBox="0 0 40 40"><rect width="40" height="40" fill="#ffffff"/><rect y="12" width="40" height="16" fill="#475569"/><rect x="12" width="16" height="40" fill="#475569"/></svg>
+                    <span>Croisement</span>
+                </div>
+                
+                <div class="tool-btn" id="tool-escalator_u" onclick="selectPiece('escalator_u')">
+                    <svg class="tool-preview" viewBox="0 0 40 40"><rect width="40" height="40" fill="#ffffff"/><rect x="10" width="20" height="40" fill="#0284c7"/><polygon points="20,10 12,20 28,20" fill="#ffffff"/></svg>
+                    <span>Ascenseur (Haut)</span>
+                </div>
+                <div class="tool-btn" id="tool-escalator_d" onclick="selectPiece('escalator_d')">
+                    <svg class="tool-preview" viewBox="0 0 40 40"><rect width="40" height="40" fill="#ffffff"/><rect x="10" width="20" height="40" fill="#0284c7"/><polygon points="20,30 12,20 28,20" fill="#ffffff"/></svg>
+                    <span>Ascenseur (Bas)</span>
+                </div>
+                <div class="tool-btn" id="tool-escalator_l" onclick="selectPiece('escalator_l')">
+                    <svg class="tool-preview" viewBox="0 0 40 40"><rect width="40" height="40" fill="#ffffff"/><rect y="10" width="40" height="20" fill="#0284c7"/><polygon points="10,20 20,12 20,28" fill="#ffffff"/></svg>
+                    <span>Ascenseur (Gauche)</span>
+                </div>
+                <div class="tool-btn" id="tool-escalator_r" onclick="selectPiece('escalator_r')">
+                    <svg class="tool-preview" viewBox="0 0 40 40"><rect width="40" height="40" fill="#ffffff"/><rect y="10" width="40" height="20" fill="#0284c7"/><polygon points="30,20 20,12 20,28" fill="#ffffff"/></svg>
+                    <span>Ascenseur (Droite)</span>
+                </div>
+
+                <div class="tool-btn" id="tool-booster_u" onclick="selectPiece('booster_u')">
+                    <svg class="tool-preview" viewBox="0 0 40 40"><rect width="40" height="40" fill="#ffffff"/><rect x="10" width="20" height="40" fill="#16a34a"/><polygon points="20,8 12,18 28,18" fill="#ffffff"/><polygon points="20,22 12,32 28,32" fill="#ffffff"/></svg>
+                    <span>Propulseur (Haut)</span>
+                </div>
+                <div class="tool-btn" id="tool-booster_d" onclick="selectPiece('booster_d')">
+                    <svg class="tool-preview" viewBox="0 0 40 40"><rect width="40" height="40" fill="#ffffff"/><rect x="10" width="20" height="40" fill="#16a34a"/><polygon points="20,32 12,22 28,22" fill="#ffffff"/><polygon points="20,18 12,8 28,8" fill="#ffffff"/></svg>
+                    <span>Propulseur (Bas)</span>
+                </div>
+                <div class="tool-btn" id="tool-booster_l" onclick="selectPiece('booster_l')">
+                    <svg class="tool-preview" viewBox="0 0 40 40"><rect width="40" height="40" fill="#ffffff"/><rect y="10" width="40" height="20" fill="#16a34a"/><polygon points="8,20 18,12 18,28" fill="#ffffff"/><polygon points="22,20 32,12 32,28" fill="#ffffff"/></svg>
+                    <span>Propulseur (Gauche)</span>
+                </div>
+                <div class="tool-btn" id="tool-booster_r" onclick="selectPiece('booster_r')">
+                    <svg class="tool-preview" viewBox="0 0 40 40"><rect width="40" height="40" fill="#ffffff"/><rect y="10" width="40" height="20" fill="#16a34a"/><polygon points="32,20 22,12 22,28" fill="#ffffff"/><polygon points="18,20 8,12 8,28" fill="#ffffff"/></svg>
+                    <span>Propulseur (Droite)</span>
+                </div>
+
+                <div class="tool-btn" id="tool-start_finish_h" onclick="selectPiece('start_finish_h')">
+                    <svg class="tool-preview" viewBox="0 0 40 40"><rect width="40" height="40" fill="#ffffff"/><rect y="10" width="40" height="20" fill="#475569"/></svg>
+                    <span>Départ (H)</span>
+                </div>
+                <div class="tool-btn" id="tool-start_finish_v" onclick="selectPiece('start_finish_v')">
+                    <svg class="tool-preview" viewBox="0 0 40 40"><rect width="40" height="40" fill="#ffffff"/><rect x="10" width="20" height="40" fill="#475569"/></svg>
+                    <span>Départ (V)</span>
+                </div>
+            </div>
+
+            <div class="section-title" style="margin-top: 10px;">Paramètres Course</div>
+            <div style="display: flex; flex-direction: column; gap: 6px; font-size: 0.8rem;">
+                <label>Nombre de tours (1-100) :</label>
+                <input type="number" id="totalLapsInput" min="1" max="100" value="3" onchange="updateTotalLaps(this.value)" style="background: #0f172a; border: 1px solid #334155; color: #f8fafc; padding: 6px; border-radius: 6px; font-weight: bold;">
+            </div>
+
+            <div class="section-title" style="margin-top: 10px;">Hauteur de la pièce (m)</div>
+            <div style="display: flex; flex-direction: column; gap: 4px; font-size: 0.8rem;">
+                <label>Prochaine tuile : <b id="elevVal">50m</b></label>
+                <input type="range" id="elevSlider" min="0" max="300" value="50" oninput="document.getElementById('elevVal').textContent = this.value + 'm'">
+            </div>
+
+            <div class="section-title" style="margin-top: 10px;">Billes de Course</div>
+            <div style="display: flex; flex-direction: column; gap: 4px;">
+                <label style="font-size: 0.8rem;">Nombre: <b id="marbleCountVal">6</b></label>
+                <input type="range" id="marbleCount" min="1" max="12" value="6" oninput="updateMarbleCount(this.value)">
+            </div>
+            
+            <div style="font-size: 0.7rem; color: #94a3b8; margin-top: 6px; line-height: 1.2;">
+                💡 <b>Astuce :</b> Molette pour zoomer, clic milieu (ou outil Déplacer / Shift+clic) pour bouger. Clic droit pour les points de passage (CP).
+            </div>
+        </div>
+
+        <div class="canvas-container" id="container">
+            <canvas id="raceCanvas"></canvas>
+
+            <div id="podiumOverlay" class="podium-overlay">
+                <div class="podium-card">
+                    <div style="font-size: 1.3rem; font-weight: 800; color: #38bdf8;">🏆 Fin de la Course ! 🏆</div>
+                    <div class="podium-steps" id="podiumStepsContainer"></div>
+                    <div id="podiumRemainingList" style="font-size: 0.8rem; color: #94a3b8; max-height: 80px; overflow-y: auto; text-align: left; padding: 0 10px;"></div>
+                    <button class="primary" onclick="closePodiumAndReset()" style="width: 100%; padding: 10px; font-weight: bold;">🔄 Nouvelle Course</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="leaderboard">
+            <div class="section-title" id="leaderboardTitle">Grille & Positions</div>
+            <div style="font-family: monospace; font-size: 1.1rem; color: #38bdf8; text-align: center; padding: 6px; background: #0f172a; border-radius: 6px; margin-bottom: 8px;" id="timer">
+                00:00.000
+            </div>
+            <ul class="rank-list" id="rankList"></ul>
+        </div>
+    </div>
+
+    <script>
+        const { Engine, World, Bodies, Body, Events } = Matter;
+
+        const canvas = document.getElementById('raceCanvas');
+        const ctx = canvas.getContext('2d');
+        const container = document.getElementById('container');
+        const podiumOverlay = document.getElementById('podiumOverlay');
+
+        const CELL_SIZE = 90;
+        const ROAD_WIDTH = 50;
+
+        let isEditMode = true;
+        let selectedPiece = 'straight_h';
+        let isDrawing = false;
+
+        // Camera variables for custom zoom & pan in edit mode
+        let cameraZoom = 1;
+        let cameraOffsetX = 0;
+        let cameraOffsetY = 0;
+        let isPanning = false;
+        let panStartX = 0;
+        let panStartY = 0;
+
+        let engine = Engine.create();
+        engine.gravity.x = 0;
+        engine.gravity.y = 0;
+
+        let grid = new Map();
+        let marbles = [];
+        let wallBodies = [];
+        let numMarbles = 6;
+        let totalLaps = 3;
+        let raceStartTime = 0;
+        let raceRunning = false;
+        let raceFinished = false;
+        let finalElapsedTime = 0;
+        let animFrameId = null;
+        let animTime = 0;
+        // Journal de chaque bille : tous les checkpoints réellement rencontrés,
+        // dans l'ordre et séparés par tour. La validation de la progression reste
+        // indépendante : seul le checkpoint attendu est comptabilisé.
+        let raceHistory = [];
+
+
+        let isQualifying = false;
+        let qualifMarbleIndex = 0;
+        let qualifTimesMap = {};
+        let currentQualifMarble = null;
+
+        let audioCtx = null;
+        function playClinkSound(intensity = 0.5, isBetweenMarbles = false) {
+            try {
+                if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                const baseFreq = isBetweenMarbles ? 1100 : 750;
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(baseFreq + Math.random() * 250, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(baseFreq * 0.4, audioCtx.currentTime + 0.04);
+
+                const volume = Math.min(intensity * 0.12, 0.2);
+                gain.gain.setValueAtTime(volume, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.04);
+
+                osc.connect(gain); gain.connect(audioCtx.destination);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.04);
+            } catch (e) {}
+        }
+
+        Events.on(engine, 'collisionStart', (event) => {
+            if (!raceRunning) return;
+            event.pairs.forEach(pair => {
+                const isAMarble = marbles.some(m => m.body === pair.bodyA);
+                const isBMarble = marbles.some(m => m.body === pair.bodyB);
+                if (isAMarble || isBMarble) {
+                    const speed = Math.hypot(pair.bodyA.velocity.x - pair.bodyB.velocity.x, pair.bodyA.velocity.y - pair.bodyB.velocity.y);
+                    if (speed > 1.5) playClinkSound(speed / 8, isAMarble && isBMarble);
+                }
+            });
+        });
+
+        // NOUVEAU : Couleurs étendues à 12 et noms assignés
+        const MARBLE_COLORS = ['#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#f97316', '#a855f7', '#84cc16', '#fbbf24', '#cbd5e1'];
+        const MARBLE_NAMES = ['Rubis', 'Saphir', 'Émeraude', 'Topaze', 'Améthyste', 'Quartz', 'Turquoise', 'Onyx', 'Opale', 'Jade', 'Ambre', 'Perle'];
+
+        function getMaxCheckpoint() {
+            let maxCp = 0;
+            grid.forEach(p => { if (p.checkpoint && p.checkpoint > maxCp) maxCp = p.checkpoint; });
+            return maxCp;
+        }
+
+        function centerCameraOnTrack() {
+            if (grid.size === 0) {
+                cameraZoom = 1; cameraOffsetX = 0; cameraOffsetY = 0;
+                draw();
+                return;
+            }
+            let minCol = Infinity, maxCol = -Infinity, minRow = Infinity, maxRow = -Infinity;
+            grid.forEach((_, key) => {
+                const [col, row] = key.split(',').map(Number);
+                if (col < minCol) minCol = col;
+                if (col > maxCol) maxCol = col;
+                if (row < minRow) minRow = row;
+                if (row > maxRow) maxRow = row;
+            });
+
+            minCol -= 1; maxCol += 1; minRow -= 1; maxRow += 1;
+
+            const minX = minCol * CELL_SIZE;
+            const maxX = (maxCol + 1) * CELL_SIZE;
+            const minY = minRow * CELL_SIZE;
+            const maxY = (maxRow + 1) * CELL_SIZE;
+
+            const circuitWidth = maxX - minX;
+            const circuitHeight = maxY - minY;
+            const circuitCenterX = (minX + maxX) / 2;
+            const circuitCenterY = (minY + maxY) / 2;
+
+            const padding = 100;
+            const scaleX = (canvas.width - padding) / (circuitWidth || 1);
+            const scaleY = (canvas.height - padding) / (circuitHeight || 1);
+            cameraZoom = Math.min(scaleX, scaleY, 1.5);
+
+            cameraOffsetX = canvas.width / 2 - circuitCenterX * cameraZoom;
+            cameraOffsetY = canvas.height / 2 - circuitCenterY * cameraZoom;
+            draw();
+        }
+
+        function getViewTransform() {
+            if (isEditMode) {
+                return { zoom: cameraZoom, offsetX: cameraOffsetX, offsetY: cameraOffsetY };
+            }
+            if (grid.size === 0) {
+                return { zoom: 1, offsetX: 0, offsetY: 0 };
+            }
+            let minCol = Infinity, maxCol = -Infinity, minRow = Infinity, maxRow = -Infinity;
+            grid.forEach((_, key) => {
+                const [col, row] = key.split(',').map(Number);
+                if (col < minCol) minCol = col;
+                if (col > maxCol) maxCol = col;
+                if (row < minRow) minRow = row;
+                if (row > maxRow) maxRow = row;
+            });
+            minCol -= 1; maxCol += 1; minRow -= 1; maxRow += 1;
+            const minX = minCol * CELL_SIZE, maxX = (maxCol + 1) * CELL_SIZE;
+            const minY = minRow * CELL_SIZE, maxY = (maxRow + 1) * CELL_SIZE;
+            const circuitWidth = maxX - minX, circuitHeight = maxY - minY;
+            const circuitCenterX = (minX + maxX) / 2, circuitCenterY = (minY + maxY) / 2;
+            const padding = 100;
+            const scaleX = (canvas.width - padding) / (circuitWidth || 1);
+            const scaleY = (canvas.height - padding) / (circuitHeight || 1);
+            let zoom = Math.min(scaleX, scaleY);
+            const offsetX = canvas.width / 2 - circuitCenterX * zoom;
+            const offsetY = canvas.height / 2 - circuitCenterY * zoom;
+            return { zoom, offsetX, offsetY };
+        }
+
+        function getMousePos(e) {
+            const rect = canvas.getBoundingClientRect();
+            const clientX = e.clientX - rect.left;
+            const clientY = e.clientY - rect.top;
+            const t = getViewTransform();
+            return {
+                x: (clientX - t.offsetX) / t.zoom,
+                y: (clientY - t.offsetY) / t.zoom
+            };
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.save();
+            const t = getViewTransform();
+            ctx.translate(t.offsetX, t.offsetY);
+            ctx.scale(t.zoom, t.zoom);
+
+            grid.forEach((piece, key) => {
+                const [col, row] = key.split(',').map(Number);
+                drawTrackPiece(col, row, piece);
+            });
+            marbles.forEach(m => {
+                ctx.save(); ctx.beginPath(); ctx.arc(m.body.position.x, m.body.position.y, 8, 0, Math.PI * 2);
+                ctx.fillStyle = m.color; ctx.fill(); ctx.lineWidth = 1.5; ctx.strokeStyle = '#000000'; ctx.stroke(); ctx.closePath(); ctx.restore();
+            });
+
+            ctx.restore();
+        }
+
+        function resize() { canvas.width = container.clientWidth; canvas.height = container.clientHeight; draw(); }
+        window.addEventListener('resize', resize);
+
+        function getCellCoords(px, py) { return { col: Math.floor(px / CELL_SIZE), row: Math.floor(py / CELL_SIZE) }; }
+        function getCellCenter(col, row) { return { x: col * CELL_SIZE + CELL_SIZE / 2, y: row * CELL_SIZE + CELL_SIZE / 2 }; }
+
+        function getPiecePorts(type) {
+            switch(type) {
+                case 'straight_h': case 'start_finish_h': case 'escalator_l': case 'escalator_r': case 'booster_l': case 'booster_r': return [{dx: -1, dy: 0}, {dx: 1, dy: 0}];
+                case 'straight_v': case 'start_finish_v': case 'escalator_u': case 'escalator_d': case 'booster_u': case 'booster_d': return [{dx: 0, dy: -1}, {dx: 0, dy: 1}];
+                case 'turn_tl': return [{dx: 0, dy: 1}, {dx: 1, dy: 0}];
+                case 'turn_tr': return [{dx: 0, dy: 1}, {dx: -1, dy: 0}];
+                case 'turn_bl': return [{dx: 0, dy: -1}, {dx: 1, dy: 0}];
+                case 'turn_br': return [{dx: 0, dy: -1}, {dx: -1, dy: 0}];
+                case 'cross': return [{dx: -1, dy: 0}, {dx: 1, dy: 0}, {dx: 0, dy: -1}, {dx: 0, dy: 1}];
+                default: return [];
+            }
+        }
+
+        function isConnected(col1, row1, col2, row2) {
+            const p1 = grid.get(`${col1},${row1}`); const p2 = grid.get(`${col2},${row2}`);
+            if (!p1 || !p2) return false;
+            const ports1 = getPiecePorts(p1.type); const ports2 = getPiecePorts(p2.type);
+            const dx = col2 - col1; const dy = row2 - row1;
+            return ports1.some(p => p.dx === dx && p.dy === dy) && ports2.some(p => p.dx === -dx && p.dy === -dy);
+        }
+
+        function getConnectedNeighbors(col, row) {
+            const result = []; const current = grid.get(`${col},${row}`);
+            if (!current) return result;
+            getPiecePorts(current.type).forEach(p => {
+                if (isConnected(col, row, col + p.dx, row + p.dy)) result.push(`${col + p.dx},${row + p.dy}`);
+            });
+            return result;
+        }
+
+        function applyAutoSlope() {
+            const HAUTEUR_MAX = 100;
+            const HAUTEUR_MIN = 10;
+            const PENTE_REPLI = 3;
+
+            const sources = new Set();
+            const sinks = new Set();
+
+            grid.forEach((piece, key) => {
+                if (piece.type.startsWith('start_finish')) {
+                    piece.elevation = HAUTEUR_MAX;
+                    sources.add(key);
+                } else if (piece.type.startsWith('escalator')) {
+                    piece.elevation = HAUTEUR_MIN;
+                    sinks.add(key);
+
+                    let [c, r] = key.split(',').map(Number);
+                    let exitKey = null;
+                    if (piece.type === 'escalator_u') exitKey = `${c},${r-1}`;
+                    if (piece.type === 'escalator_d') exitKey = `${c},${r+1}`;
+                    if (piece.type === 'escalator_l') exitKey = `${c-1},${r}`;
+                    if (piece.type === 'escalator_r') exitKey = `${c+1},${r}`;
+
+                    if (exitKey && grid.has(exitKey)) {
+                        const exitPiece = grid.get(exitKey);
+                        if (!exitPiece.type.startsWith('escalator') && !exitPiece.type.startsWith('booster')) {
+                            exitPiece.elevation = HAUTEUR_MAX;
+                            sources.add(exitKey);
+                        }
+                    }
+                } else if (piece.type === 'cross') {
+                    piece.elevation = HAUTEUR_MIN;
+                    sinks.add(key);
+                }
+            });
+
+            if (sources.size === 0 && grid.size > 0) {
+                let firstKey = grid.keys().next().value;
+                grid.get(firstKey).elevation = HAUTEUR_MAX;
+                sources.add(firstKey);
+            }
+
+            const visited = new Set([...sources, ...sinks]);
+
+            function walkPath(fromKey, firstKey) {
+                const path = [];
+                let prevKey = fromKey;
+                let currKey = firstKey;
+                let terminal = 'deadend';
+
+                while (true) {
+                    if (sinks.has(currKey)) { terminal = 'sink'; break; }
+                    if (sources.has(currKey)) { terminal = 'source'; break; }
+                    if (visited.has(currKey)) { terminal = 'merged'; break; }
+
+                    visited.add(currKey);
+                    path.push(currKey);
+
+                    const [c, r] = currKey.split(',').map(Number);
+                    const nextKey = getConnectedNeighbors(c, r).find(k => k !== prevKey);
+                    if (!nextKey) { terminal = 'deadend'; break; }
+                    prevKey = currKey;
+                    currKey = nextKey;
+                }
+                return { path, terminal };
+            }
+
+            sources.forEach(sourceKey => {
+                const [c, r] = sourceKey.split(',').map(Number);
+                getConnectedNeighbors(c, r).forEach(firstKey => {
+                    if (visited.has(firstKey)) return;
+
+                    const { path, terminal } = walkPath(sourceKey, firstKey);
+                    const n = path.length;
+                    if (n === 0) return;
+
+                    if (terminal === 'sink') {
+                        for (let i = 0; i < n; i++) {
+                            const ratio = (i + 1) / (n + 1);
+                            grid.get(path[i]).elevation = Math.round(HAUTEUR_MAX - ratio * (HAUTEUR_MAX - HAUTEUR_MIN));
+                        }
+                    } else if (terminal === 'source') {
+                        for (let i = 0; i < n; i++) {
+                            const d = Math.min(i + 1, n - i);
+                            grid.get(path[i]).elevation = Math.round(Math.max(HAUTEUR_MIN, HAUTEUR_MAX - d * PENTE_REPLI));
+                        }
+                    } else {
+                        for (let i = 0; i < n; i++) {
+                            grid.get(path[i]).elevation = Math.round(Math.max(HAUTEUR_MIN, HAUTEUR_MAX - (i + 1) * PENTE_REPLI));
+                        }
+                    }
+                });
+            });
+
+            grid.forEach((piece, key) => {
+                if (!visited.has(key)) piece.elevation = 50;
+            });
+
+            document.getElementById('elevSlider').max = 150;
+            buildPhysicsWalls(); draw();
+        }
+
+        function resetAllSlopesTo50() {
+            grid.forEach(piece => piece.elevation = 50);
+            document.getElementById('elevSlider').value = 50; document.getElementById('elevVal').textContent = '50m';
+            buildPhysicsWalls(); draw();
+        }
+
+        function getSlopeAt(px, py) {
+            const { col, row } = getCellCoords(px, py);
+            const current = grid.get(`${col},${row}`);
+            if (!current || current.type.startsWith('escalator') || current.type.startsWith('booster')) return { fx: 0, fy: 0, slopeMag: 0 };
+            const GRAVITE = 0.00006;
+            const POUSSEE_MIN = 0.00003;
+            let totalFx = 0, totalFy = 0;
+            [{ dCol: 1, dRow: 0, dx: 1, dy: 0 }, { dCol: -1, dRow: 0, dx: -1, dy: 0 }, { dCol: 0, dRow: 1, dx: 0, dy: 1 }, { dCol: 0, dRow: -1, dx: 0, dy: -1 }].forEach(n => {
+                if (!isConnected(col, row, col + n.dCol, row + n.dRow)) return;
+                const neighborTile = grid.get(`${col + n.dCol},${row + n.dRow}`);
+                if (neighborTile && !neighborTile.type.startsWith('escalator') && !neighborTile.type.startsWith('booster')) {
+                    const dz = current.elevation - neighborTile.elevation;
+                    if (dz !== 0) {
+                        const mag = Math.max(POUSSEE_MIN, Math.abs(dz) * GRAVITE);
+                        totalFx += n.dx * Math.sign(dz) * mag;
+                        totalFy += n.dy * Math.sign(dz) * mag;
+                    }
+                }
+            });
+            return { fx: totalFx, fy: totalFy, slopeMag: Math.hypot(totalFx, totalFy) };
+        }
+
+        function buildPhysicsWalls() {
+            wallBodies.forEach(b => World.remove(engine.world, b)); wallBodies = [];
+            const wallThickness = 10, halfSize = CELL_SIZE / 2, roadHalf = ROAD_WIDTH / 2;
+
+            grid.forEach((piece, key) => {
+                const [col, row] = key.split(',').map(Number);
+                const center = getCellCenter(col, row);
+                const type = piece.type;
+                
+                function addWall(x, y, w, h, angle = 0) {
+                    const wall = Bodies.rectangle(x, y, w, h, { isStatic: true, angle, friction: 0.05, restitution: 0.7 });
+                    World.add(engine.world, wall); wallBodies.push(wall);
+                }
+
+                if (type === 'straight_h' || type === 'start_finish_h' || type === 'escalator_l' || type === 'escalator_r' || type === 'booster_l' || type === 'booster_r') {
+                    addWall(center.x, center.y - roadHalf, CELL_SIZE, wallThickness); 
+                    addWall(center.x, center.y + roadHalf, CELL_SIZE, wallThickness);
+                    if (!grid.has(`${col-1},${row}`)) addWall(center.x - halfSize, center.y, wallThickness, ROAD_WIDTH);
+                    if (!grid.has(`${col+1},${row}`)) addWall(center.x + halfSize, center.y, wallThickness, ROAD_WIDTH);
+                    
+                } else if (type === 'straight_v' || type === 'start_finish_v' || type === 'escalator_u' || type === 'escalator_d' || type === 'booster_u' || type === 'booster_d') {
+                    addWall(center.x - roadHalf, center.y, wallThickness, CELL_SIZE); 
+                    addWall(center.x + roadHalf, center.y, wallThickness, CELL_SIZE);
+                    if (!grid.has(`${col},${row-1}`)) addWall(center.x, center.y - halfSize, ROAD_WIDTH, wallThickness);
+                    if (!grid.has(`${col},${row+1}`)) addWall(center.x, center.y + halfSize, ROAD_WIDTH, wallThickness);
+                    
+                } else if (type === 'cross') {
+                    const cornerSize = (CELL_SIZE - ROAD_WIDTH) / 2; 
+                    const cornerOffset = CELL_SIZE / 2 - cornerSize / 2; 
+                    
+                    addWall(center.x - cornerOffset, center.y - cornerOffset, cornerSize, cornerSize); 
+                    addWall(center.x + cornerOffset, center.y - cornerOffset, cornerSize, cornerSize); 
+                    addWall(center.x - cornerOffset, center.y + cornerOffset, cornerSize, cornerSize); 
+                    addWall(center.x + cornerOffset, center.y + cornerOffset, cornerSize, cornerSize); 
+
+                    if (!grid.has(`${col-1},${row}`)) addWall(center.x - halfSize, center.y, wallThickness, ROAD_WIDTH);
+                    if (!grid.has(`${col+1},${row}`)) addWall(center.x + halfSize, center.y, wallThickness, ROAD_WIDTH);
+                    if (!grid.has(`${col},${row-1}`)) addWall(center.x, center.y - halfSize, ROAD_WIDTH, wallThickness);
+                    if (!grid.has(`${col},${row+1}`)) addWall(center.x, center.y + halfSize, ROAD_WIDTH, wallThickness);
+                    
+                } else if (type.startsWith('turn_')) {
+                    let cx, cy, aStart;
+                    if (type === 'turn_tl') { cx = center.x + halfSize; cy = center.y + halfSize; aStart = Math.PI; }
+                    else if (type === 'turn_tr') { cx = center.x - halfSize; cy = center.y + halfSize; aStart = 1.5 * Math.PI; }
+                    else if (type === 'turn_bl') { cx = center.x + halfSize; cy = center.y - halfSize; aStart = 0.5 * Math.PI; }
+                    else if (type === 'turn_br') { cx = center.x - halfSize; cy = center.y - halfSize; aStart = 0; }
+
+                    const innerR = halfSize - roadHalf, outerR = halfSize + roadHalf, steps = 8;
+                    for (let i = 0; i < steps; i++) {
+                        const midA = aStart + ((i + 0.5) / steps) * (Math.PI / 2);
+                        const wallAngle = midA + Math.PI / 2;
+                        addWall(cx + outerR * Math.cos(midA), cy + outerR * Math.sin(midA), outerR * (Math.PI / 2) / steps + 4, wallThickness, wallAngle);
+                        if (innerR > 5) addWall(cx + innerR * Math.cos(midA), cy + innerR * Math.sin(midA), innerR * (Math.PI / 2) / steps + 4, wallThickness, wallAngle);
+                    }
+                }
+            });
+        }
+
+        function createMarbles(keepOrder = false) {
+            let existingOrder = keepOrder ? [...marbles] : null; marbles.forEach(m => World.remove(engine.world, m.body)); marbles = [];
+            
+            let startPieceType = 'start_finish_h';
+            let startPos = null; 
+            grid.forEach((val, key) => { 
+                if (val.type.startsWith('start_finish')) { 
+                    const [col, row] = key.split(',').map(Number); 
+                    startPos = getCellCenter(col, row); 
+                    startPieceType = val.type;
+                } 
+            });
+            if (!startPos) startPos = { x: 200, y: 200 };
+            
+            let orderIndices = existingOrder && existingOrder.length > 0 ? existingOrder.map(m => m.id - 1) : Array.from({length: numMarbles}, (_, i) => i);
+            const now = performance.now();
+            
+            orderIndices.forEach((origIdx, slotIdx) => {
+                let offsetX = 0, offsetY = 0;
+                if (startPieceType === 'start_finish_h') {
+                    const cols = Math.min(6, numMarbles);
+                    const cIdx = slotIdx % cols;
+                    const rIdx = Math.floor(slotIdx / cols);
+                    offsetX = (cIdx - (cols - 1) / 2) * 16;
+                    offsetY = (rIdx - 0.5) * 12; 
+                } else {
+                    const rows = Math.min(6, numMarbles);
+                    const rIdx = slotIdx % rows;
+                    const cIdx = Math.floor(slotIdx / rows);
+                    offsetX = (cIdx - 0.5) * 12; 
+                    offsetY = (rIdx - (rows - 1) / 2) * 16;
+                }
+
+                const body = Bodies.circle(startPos.x + offsetX, startPos.y + offsetY, 8, { restitution: 0.5, friction: 0.0001, frictionAir: 0.0006, density: 0.008 });
+                World.add(engine.world, body);
+                const oldMarble = existingOrder ? existingOrder.find(m => m.id === origIdx + 1) : null;
+                
+                marbles.push({ 
+                    id: origIdx + 1,
+                    name: MARBLE_NAMES[origIdx % MARBLE_NAMES.length], // Assignation du nom
+                    color: MARBLE_COLORS[origIdx % MARBLE_COLORS.length], 
+                    body, 
+                    lapsCompleted: 0, 
+                    bestLapTime: oldMarble ? oldMarble.bestLapTime : null, 
+                    lapStartTime: now, 
+                    lastLapTime: 0, 
+                    finished: false, 
+                    finishTime: null,
+                    nextCheckpoint: 1,
+                    lapValidatedCheckpoints: [],
+                    lastCheckpointTime: 0,
+                    history: {
+                        // Tous les CP réellement rencontrés, dans l'ordre.
+                        checkpointLog: [],
+                        // Uniquement les CP validés dans l'ordre attendu.
+                        checkpoints: [],
+                        cells: [],
+                        events: [],
+                        lastTileKey: null,
+                        lastCheckpointTileKey: null,
+                        lastTileTime: 0,
+                        offTrackSince: null
+                    } 
+                });
+            });
+            updateLeaderboardUI();
+        }
+
+        function runEngine() {
+            if (!raceRunning || raceFinished) return;
+            animTime += 0.05;
+            const subSteps = 4;
+            for (let i = 0; i < subSteps; i++) {
+                Engine.update(engine, 1000 / (60 * subSteps));
+                const now = performance.now();
+                marbles.forEach(m => {
+                    const pos = m.body.position;
+                    const { col, row } = getCellCoords(pos.x, pos.y);
+                    const tileKey = `${col},${row}`;
+                    const tile = grid.get(tileKey);
+
+                    if (tile) {
+                        const center = getCellCenter(col, row);
+                        const dx = Math.abs(pos.x - center.x);
+                        const dy = Math.abs(pos.y - center.y);
+
+                        // Journalisation de la trajectoire : chaque nouvelle case
+                        // est mémorisée (sans répéter plusieurs fois la même case).
+                        if (m.history) {
+                            if (m.history.lastTileKey !== tileKey) {
+                                m.history.lastTileKey = tileKey;
+                                m.history.lastTileTime = now - raceStartTime;
+                                m.history.cells.push({
+                                    t: Math.round(now - raceStartTime),
+                                    lap: m.lapsCompleted + 1,
+                                    col, row,
+                                    type: tile.type || 'unknown',
+                                    checkpoint: tile.checkpoint || null
+                                });
+                                // On garde une taille raisonnable même sur une longue course.
+                                if (m.history.cells.length > 1500) m.history.cells.shift();
+                            }
+                            m.history.offTrackSince = null;
+                        }
+
+                        // Chaque fois qu'une bille ENTRE sur une case CP, on
+                        // enregistre le CP dans le journal.
+                        //
+                        // Important : le journal conserve TOUS les CP rencontrés
+                        // (CP1 -> CP3 -> CP2 -> CP3...), mais seul le CP attendu
+                        // est comptabilisé dans la progression de la course.
+                        // Un CP rencontré dans le mauvais ordre ne fait donc pas
+                        // avancer nextCheckpoint. La bille devra revenir sur le
+                        // CP attendu avant de pouvoir continuer.
+                        if (!m.finished && tile.checkpoint && m.history && m.history.lastCheckpointTileKey !== tileKey) {
+                            const cp = tile.checkpoint;
+                            const expected = m.nextCheckpoint;
+                            const lap = m.lapsCompleted + 1;
+                            const t = Math.round(now - raceStartTime);
+
+                            m.history.lastCheckpointTileKey = tileKey;
+
+                            // Journal brut : chaque franchissement d'un CP, sans
+                            // qualifier le passage de bon ou mauvais.
+                            m.history.checkpointLog.push({ cp, lap, t });
+
+                            // Le journal visible est rafraîchi immédiatement,
+                            // sans attendre la validation du tour.
+                            refreshOpenMarbleJournal(m);
+
+                            // Validation stricte : seul le CP attendu compte.
+                            // La validation est mémorisée séparément pour CE tour.
+                            // Ainsi, un CP4 validé au tour précédent ne peut jamais
+                            // servir à faire valider le tour suivant.
+                            if (cp === expected) {
+                                m.nextCheckpoint++;
+                                m.lapValidatedCheckpoints.push(cp);
+                                m.lastCheckpointTime = now - raceStartTime;
+
+                                m.history.checkpoints.push({
+                                    cp,
+                                    lap,
+                                    t,
+                                    order: m.history.checkpoints.length + 1
+                                });
+
+                                playClinkSound(0.8, false);
+                            }
+
+                            // Rafraîchissement IMMÉDIAT du classement et du journal.
+                            // On ne doit plus attendre la validation du tour :
+                            // dès qu'un CP est rencontré, il apparaît dans le journal.
+                            updateLeaderboardUI();
+                        }
+
+                        let inEscalatorZone = false;
+                        if (tile.type === 'escalator_u' || tile.type === 'escalator_d') {
+                            inEscalatorZone = (dx < ROAD_WIDTH / 2 - 2) && (dy < CELL_SIZE * 0.35);
+                        } else if (tile.type === 'escalator_l' || tile.type === 'escalator_r') {
+                            inEscalatorZone = (dy < ROAD_WIDTH / 2 - 2) && (dx < CELL_SIZE * 0.35);
+                        }
+
+                        let inBoosterZone = false;
+                        if (tile.type === 'booster_u' || tile.type === 'booster_d') {
+                            inBoosterZone = (dx < ROAD_WIDTH / 2 - 2) && (dy < CELL_SIZE * 0.35);
+                        } else if (tile.type === 'booster_l' || tile.type === 'booster_r') {
+                            inBoosterZone = (dy < ROAD_WIDTH / 2 - 2) && (dx < CELL_SIZE * 0.35);
+                        }
+
+                        if (inEscalatorZone) {
+                            if (tile.type === 'escalator_u') Body.setVelocity(m.body, { x: 0, y: -2.5 });
+                            else if (tile.type === 'escalator_d') Body.setVelocity(m.body, { x: 0, y: 2.5 });
+                            else if (tile.type === 'escalator_l') Body.setVelocity(m.body, { x: -2.5, y: 0 });
+                            else if (tile.type === 'escalator_r') Body.setVelocity(m.body, { x: 2.5, y: 0 });
+                        } else if (inBoosterZone) {
+                            const boostMultiplier = 3.0;
+                            const maxBoostSpeed = 26;
+                            if (tile.type === 'booster_u') {
+                                let targetVy = Math.min(Math.max(Math.abs(m.body.velocity.y) * boostMultiplier, 9.0), maxBoostSpeed);
+                                Body.setVelocity(m.body, { x: m.body.velocity.x * 0.95, y: -targetVy });
+                            } else if (tile.type === 'booster_d') {
+                                let targetVy = Math.min(Math.max(Math.abs(m.body.velocity.y) * boostMultiplier, 9.0), maxBoostSpeed);
+                                Body.setVelocity(m.body, { x: m.body.velocity.x * 0.95, y: targetVy });
+                            } else if (tile.type === 'booster_l') {
+                                let targetVx = Math.min(Math.max(Math.abs(m.body.velocity.x) * boostMultiplier, 9.0), maxBoostSpeed);
+                                Body.setVelocity(m.body, { x: -targetVx, y: m.body.velocity.y * 0.95 });
+                            } else if (tile.type === 'booster_r') {
+                                let targetVx = Math.min(Math.max(Math.abs(m.body.velocity.x) * boostMultiplier, 9.0), maxBoostSpeed);
+                                Body.setVelocity(m.body, { x: targetVx, y: m.body.velocity.y * 0.95 });
+                            }
+                        } else {
+                            const slope = getSlopeAt(pos.x, pos.y);
+                            Body.applyForce(m.body, pos, { x: slope.fx * m.body.mass, y: slope.fy * m.body.mass });
+                        }
+
+                        const speed = Math.hypot(m.body.velocity.x, m.body.velocity.y);
+                        const maxGlobalSpeed = inBoosterZone ? 28 : 16;
+                        if (speed > maxGlobalSpeed) { 
+                            const scale = maxGlobalSpeed / speed; 
+                            Body.setVelocity(m.body, { x: m.body.velocity.x * scale, y: m.body.velocity.y * scale }); 
+                        }
+                        
+                        const maxCp = getMaxCheckpoint();
+                        // Une ligne d'arrivée n'est franchissable que si TOUS les
+                        // checkpoints du tour courant ont réellement été validés
+                        // dans l'ordre. Le simple fait d'avoir fait 3 tours ne suffit pas.
+                        const expectedLapCheckpoints = Array.from({ length: maxCp }, (_, i) => i + 1);
+                        const validCurrentLap = maxCp === 0 ||
+                            (m.nextCheckpoint > maxCp &&
+                             Array.isArray(m.lapValidatedCheckpoints) &&
+                             m.lapValidatedCheckpoints.length === maxCp &&
+                             m.lapValidatedCheckpoints.every((cp, i) => cp === expectedLapCheckpoints[i]));
+                        const canCross = validCurrentLap;
+
+                        // Une bille qui a déjà terminé ne doit PLUS pouvoir
+                        // repasser la ligne d'arrivée et augmenter son nombre de tours.
+                        // C'était la cause du "Tours : 4 / 3" (puis 5 / 3, etc.)
+                        // et, surtout, du remplacement de son temps d'arrivée.
+                        if (!m.finished &&
+                            tile.type.startsWith('start_finish') &&
+                            (now - raceStartTime) > 1000 &&
+                            now - m.lastLapTime > 1500 &&
+                            canCross) {
+
+                            const lapDuration = now - m.lapStartTime;
+                            if (!m.bestLapTime || lapDuration < m.bestLapTime) {
+                                m.bestLapTime = lapDuration;
+                            }
+
+                            // Ce passage de la ligne valide un tour COMPLET :
+                            // tous les CP du tour courant ont été validés dans l'ordre.
+                            m.lapsCompleted++;
+                            m.history?.events.push({
+                                type: 'lap',
+                                t: Math.round(now - raceStartTime),
+                                text: `Tour ${m.lapsCompleted} terminé`
+                            });
+                            m.history?.events.push({
+                                type: 'validatedLap',
+                                t: Math.round(now - raceStartTime),
+                                text: `Tour ${m.lapsCompleted} validé : ${m.lapValidatedCheckpoints.map(cp => `CP${cp}`).join(' → ')}`
+                            });
+                            m.lapStartTime = now;
+                            m.lastLapTime = now;
+                            m.nextCheckpoint = 1;
+                            m.lapValidatedCheckpoints = [];
+
+                            if (isQualifying && m.lapsCompleted >= 3) {
+                                qualifTimesMap[m.id] = m.bestLapTime;
+                                m.finished = true; // bloque toute nouvelle traversée
+                                m.finishTime = now - raceStartTime;
+                                qualifMarbleIndex++;
+                                spawnNextQualifMarble();
+                                return;
+
+                            } else if (!isQualifying && m.lapsCompleted >= totalLaps) {
+                                // Le temps d'arrivée est fixé UNE SEULE FOIS.
+                                m.finished = true;
+                                m.finishTime = now - raceStartTime;
+                                m.history?.events.push({
+                                    type: 'finish',
+                                    t: Math.round(m.finishTime),
+                                    text: `Arrivée après ${m.lapsCompleted} tour(s)`
+                                });
+                            }
+
+                            updateLeaderboardUI();
+                        }
+                    }
+
+                    // Hors piste : on teste ici, en dehors de if(tile), afin de
+                    // pouvoir réellement détecter une bille qui quitte la piste.
+                    if (!tile && m.history) {
+                        if (m.history.offTrackSince === null) {
+                            m.history.offTrackSince = now - raceStartTime;
+                        } else if ((now - raceStartTime) - m.history.offTrackSince > 600) {
+                            const lastEvent = m.history.events[m.history.events.length - 1];
+                            if (!lastEvent || lastEvent.type !== 'offtrack' ||
+                                (now - raceStartTime) - lastEvent.t > 1000) {
+                                m.history.events.push({
+                                    type: 'offtrack',
+                                    t: Math.round(now - raceStartTime),
+                                    text: 'Bille hors piste / aucune case détectée'
+                                });
+                            }
+                        }
+                    } else if (m.history) {
+                        m.history.offTrackSince = null;
+                    }
+                });
+            }
+            // Dès que les 3 premiers ont franchi la ligne, le podium est
+            // définitivement connu : aucun concurrent encore en piste ne peut
+            // dépasser un concurrent qui a déjà terminé.
+            //
+            // On attend la fin de cette frame avant de tester afin de prendre
+            // en compte plusieurs arrivées quasi simultanées.
+            const finishedCount = marbles.filter(m => {
+                if (!m.finished || m.lapsCompleted < totalLaps) return false;
+                const maxCp = getMaxCheckpoint();
+                if (maxCp === 0) return true;
+                const validated = m.history?.checkpoints || [];
+                // Le dernier tour doit lui aussi avoir été validé avant l'arrivée.
+                const lastLap = validated.filter(x => x.lap === totalLaps).map(x => x.cp);
+                return lastLap.length === maxCp && lastLap.every((cp, i) => cp === i + 1);
+            }).length;
+            const podiumSize = Math.min(3, marbles.length);
+
+            if (!isQualifying && marbles.length > 0 && finishedCount >= podiumSize) {
+                raceFinished = true;
+                raceRunning = false;
+                finalElapsedTime = performance.now() - raceStartTime;
+                triggerPodiumAnimation();
+                return;
+            }
+            const elapsed = performance.now() - raceStartTime;
+            document.getElementById('timer').textContent = `${String(Math.floor(elapsed / 1000)).padStart(2, '0')}:${String(Math.floor(elapsed % 1000)).padStart(3, '0')}`;
+            draw(); animFrameId = requestAnimationFrame(runEngine);
+        }
+
+        canvas.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            if (!isEditMode) return;
+            const zoomIntensity = 1.15;
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+
+            const worldX = (mouseX - cameraOffsetX) / cameraZoom;
+            const worldY = (mouseY - cameraOffsetY) / cameraZoom;
+
+            if (e.deltaY < 0) {
+                cameraZoom *= zoomIntensity;
+            } else {
+                cameraZoom /= zoomIntensity;
+            }
+            cameraZoom = Math.max(0.2, Math.min(8, cameraZoom));
+
+            cameraOffsetX = mouseX - worldX * cameraZoom;
+            cameraOffsetY = mouseY - worldY * cameraZoom;
+            draw();
+        }, { passive: false });
+
+        canvas.addEventListener('mousedown', (e) => { 
+            if (!isEditMode) return;
+            if (e.button === 1 || selectedPiece === 'pan' || e.shiftKey) { 
+                isPanning = true;
+                panStartX = e.clientX - cameraOffsetX;
+                panStartY = e.clientY - cameraOffsetY;
+                canvas.classList.add('panning');
+                e.preventDefault();
+            } else if (e.button === 0 && selectedPiece !== 'pan') { 
+                isDrawing = true; 
+                handleLeftClick(e); 
+            } 
+        });
+
+        canvas.addEventListener('mousemove', (e) => { 
+            if (!isEditMode) return;
+            if (isPanning) {
+                cameraOffsetX = e.clientX - panStartX;
+                cameraOffsetY = e.clientY - panStartY;
+                draw();
+            } else if (isDrawing) {
+                handleLeftClick(e); 
+            }
+        });
+
+        window.addEventListener('mouseup', () => { 
+            isDrawing = false; 
+            if (isPanning) {
+                isPanning = false;
+                canvas.classList.remove('panning');
+            }
+        });
+
+        canvas.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            if (!isEditMode) return;
+            const pos = getMousePos(e);
+            const { col, row } = getCellCoords(pos.x, pos.y);
+            const key = `${col},${row}`;
+            const piece = grid.get(key);
+            if (!piece) return;
+
+            let maxCp = getMaxCheckpoint();
+            if (piece.checkpoint) {
+                piece.checkpoint = null;
+            } else {
+                piece.checkpoint = maxCp + 1;
+            }
+            draw();
+        });
+
+        function handleLeftClick(e) {
+            if (selectedPiece === 'pan') return;
+            const pos = getMousePos(e);
+            const { col, row } = getCellCoords(pos.x, pos.y);
+            const key = `${col},${row}`;
+            const curElev = parseInt(document.getElementById('elevSlider').value);
+
+            const existingPiece = grid.get(key);
+            const existingCheckpoint = existingPiece ? existingPiece.checkpoint : null;
+
+            if (selectedPiece === 'erase') {
+                grid.delete(key);
+            } else if (selectedPiece === 'cross') {
+                grid.set(key, { type: 'cross', elevation: 10, checkpoint: existingCheckpoint });
+            } else {
+                grid.set(key, { type: selectedPiece, elevation: curElev, checkpoint: existingCheckpoint });
+            }
+
+            buildPhysicsWalls(); draw();
+        }
+
+        function drawTrackPiece(col, row, piece) {
+            const center = getCellCenter(col, row), x = col * CELL_SIZE, y = row * CELL_SIZE, half = CELL_SIZE / 2, rWidth = ROAD_WIDTH;
+            ctx.save();
+            const slope = getSlopeAt(center.x, center.y);
+            ctx.fillStyle = piece.type.startsWith('booster') ? '#064e3b' : '#1e293b'; 
+            ctx.fillRect(x, y, CELL_SIZE, CELL_SIZE);
+            
+            ctx.strokeStyle = piece.type.startsWith('booster') ? '#22c55e' : `hsl(${(1 - Math.min(1, slope.slopeMag * 3500)) * 220}, 85%, 50%)`; 
+            ctx.lineWidth = 3;
+            ctx.strokeRect(x + 1, y + 1, CELL_SIZE - 2, CELL_SIZE - 2);
+            ctx.fillStyle = piece.type.startsWith('escalator') ? '#0f4c81' : (piece.type.startsWith('booster') ? '#065f46' : '#262626');
+            
+            if (piece.type === 'straight_h' || piece.type === 'start_finish_h' || piece.type === 'escalator_l' || piece.type === 'escalator_r' || piece.type === 'booster_l' || piece.type === 'booster_r') {
+                ctx.fillRect(x, center.y - rWidth/2, CELL_SIZE, rWidth);
+                drawKerb(x, center.y - rWidth/2, CELL_SIZE, 4, true); drawKerb(x, center.y + rWidth/2 - 4, CELL_SIZE, 4, true);
+                if (!piece.type.startsWith('booster')) {
+                    ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = 2; ctx.setLineDash([8, 6]); ctx.beginPath(); ctx.moveTo(x, center.y); ctx.lineTo(x + CELL_SIZE, center.y); ctx.stroke(); ctx.setLineDash([]);
+                }
+                if (piece.type === 'start_finish_h') {
+                    for (let sx = 0; sx < CELL_SIZE; sx += 6) for (let sy = center.y - rWidth/2; sy < center.y + rWidth/2; sy += 6) {
+                        ctx.fillStyle = ((sx / 6) + Math.floor(sy / 6)) % 2 === 0 ? '#ffffff' : '#000000'; ctx.fillRect(x + sx, sy, 6, 6);
+                    }
+                } else if (piece.type.startsWith('escalator')) {
+                    ctx.fillStyle = '#38bdf8'; ctx.font = 'bold 14px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                    let offset = (animTime * 25) % 15;
+                    if (piece.type === 'escalator_r') ctx.fillText('▶', center.x + offset - 8, center.y);
+                    else ctx.fillText('◀', center.x - offset + 8, center.y);
+                } else if (piece.type.startsWith('booster')) {
+                    ctx.fillStyle = '#4ade80'; ctx.font = 'bold 16px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                    let offset = (animTime * 45) % 20;
+                    if (piece.type === 'booster_r') ctx.fillText('»»', center.x + offset - 10, center.y);
+                    else ctx.fillText('««', center.x - offset + 10, center.y);
+                }
+            } else if (piece.type === 'straight_v' || piece.type === 'start_finish_v' || piece.type === 'escalator_u' || piece.type === 'escalator_d' || piece.type === 'booster_u' || piece.type === 'booster_d') {
+                ctx.fillRect(center.x - rWidth/2, y, rWidth, CELL_SIZE);
+                drawKerb(center.x - rWidth/2, y, 4, CELL_SIZE, false); drawKerb(center.x + rWidth/2 - 4, y, 4, CELL_SIZE, false);
+                if (!piece.type.startsWith('booster')) {
+                    ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = 2; ctx.setLineDash([8, 6]); ctx.beginPath(); ctx.moveTo(center.x, y); ctx.lineTo(center.x, y + CELL_SIZE); ctx.stroke(); ctx.setLineDash([]);
+                }
+                if (piece.type === 'start_finish_v') {
+                    for (let sx = center.x - rWidth/2; sx < center.x + rWidth/2; sx += 6) for (let sy = 0; sy < CELL_SIZE; sy += 6) {
+                        ctx.fillStyle = (Math.floor(sx / 6) + (sy / 6)) % 2 === 0 ? '#ffffff' : '#000000'; ctx.fillRect(sx, y + sy, 6, 6);
+                    }
+                } else if (piece.type.startsWith('escalator')) {
+                    ctx.fillStyle = '#38bdf8'; ctx.font = 'bold 14px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                    let offset = (animTime * 25) % 15;
+                    if (piece.type === 'escalator_u') ctx.fillText('▲', center.x, center.y - offset + 8);
+                    else ctx.fillText('▼', center.x, center.y + offset - 8);
+                } else if (piece.type.startsWith('booster')) {
+                    ctx.fillStyle = '#4ade80'; ctx.font = 'bold 16px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                    let offset = (animTime * 45) % 20;
+                    if (piece.type === 'booster_u') ctx.fillText('▲▲', center.x, center.y - offset + 10);
+                    else ctx.fillText('▼▼', center.x, center.y + offset - 10);
+                }
+            } else if (piece.type === 'cross') {
+                ctx.fillRect(x, center.y - rWidth/2, CELL_SIZE, rWidth); ctx.fillRect(center.x - rWidth/2, y, rWidth, CELL_SIZE);
+                drawKerb(x, center.y - rWidth/2, CELL_SIZE, 4, true); drawKerb(x, center.y + rWidth/2 - 4, CELL_SIZE, 4, true);
+                drawKerb(center.x - rWidth/2, y, 4, CELL_SIZE, false); drawKerb(center.x + rWidth/2 - 4, y, 4, CELL_SIZE, false);
+                ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = 2; ctx.setLineDash([6, 6]); ctx.beginPath();
+                ctx.moveTo(x, center.y); ctx.lineTo(x + CELL_SIZE, center.y); ctx.moveTo(center.x, y); ctx.lineTo(center.x, y + CELL_SIZE); ctx.stroke(); ctx.setLineDash([]);
+            } else if (piece.type.startsWith('turn_')) {
+                let cx, cy, startAngle, endAngle;
+                if (piece.type === 'turn_tl') { cx = x + CELL_SIZE; cy = y + CELL_SIZE; startAngle = Math.PI; endAngle = 1.5 * Math.PI; }
+                else if (piece.type === 'turn_tr') { cx = x; cy = y + CELL_SIZE; startAngle = 1.5 * Math.PI; endAngle = 2 * Math.PI; }
+                else if (piece.type === 'turn_bl') { cx = x + CELL_SIZE; cy = y; startAngle = 0.5 * Math.PI; endAngle = Math.PI; }
+                else if (piece.type === 'turn_br') { cx = x; cy = y; startAngle = 0; endAngle = 0.5 * Math.PI; }
+                ctx.beginPath(); ctx.arc(cx, cy, half + rWidth/2, startAngle, endAngle); ctx.arc(cx, cy, Math.max(0, half - rWidth/2), endAngle, startAngle, true); ctx.closePath(); ctx.fill();
+                ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = 2; ctx.setLineDash([6, 6]); ctx.beginPath(); ctx.arc(cx, cy, half, startAngle, endAngle); ctx.stroke(); ctx.setLineDash([]);
+            }
+
+            if (piece.checkpoint) {
+                ctx.fillStyle = '#f59e0b';
+                ctx.beginPath();
+                ctx.arc(center.x, center.y, 13, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.lineWidth = 2;
+                ctx.strokeStyle = '#000000';
+                ctx.stroke();
+                ctx.fillStyle = '#0f172a';
+                ctx.font = 'bold 12px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(`CP${piece.checkpoint}`, center.x, center.y);
+            }
+
+            if (piece.type.startsWith('start_finish')) {
+                let maxLaps = marbles.length > 0 ? Math.max(...marbles.map(m => m.lapsCompleted)) : 0;
+                ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
+                ctx.strokeStyle = '#38bdf8';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.roundRect(center.x - 38, y - 24, 76, 20, 4);
+                ctx.fill();
+                ctx.stroke();
+                ctx.fillStyle = '#38bdf8';
+                ctx.font = 'bold 11px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(`Tours : ${maxLaps}/${totalLaps}`, center.x, y - 14);
+            }
+
+            if (isEditMode) { 
+                ctx.fillStyle = '#f8fafc'; 
+                ctx.font = 'bold 10px monospace'; 
+                ctx.textAlign = 'right'; 
+                ctx.textBaseline = 'alphabetic'; 
+                ctx.fillText(`${Math.round(piece.elevation)}m`, x + CELL_SIZE - 4, y + 12); 
+            }
+            ctx.restore();
+        }
+
+        function drawKerb(x, y, w, h, isHorizontal) { ctx.fillStyle = '#ef4444'; ctx.fillRect(x, y, w, h); ctx.fillStyle = '#ffffff'; const step = 8; if (isHorizontal) { for (let i = 0; i < w; i += step * 2) ctx.fillRect(x + i, y, step, h); } else { for (let i = 0; i < h; i += step * 2) ctx.fillRect(x, y + i, w, step); } }
+        
+        function selectPiece(piece) { 
+            selectedPiece = piece; 
+            document.querySelectorAll('.tool-btn').forEach(btn => btn.classList.remove('active')); 
+            const activeBtn = document.getElementById(`tool-${piece}`);
+            if (activeBtn) activeBtn.classList.add('active'); 
+        }
+
+        function toggleMode() { 
+            isEditMode = !isEditMode; 
+            const btn = document.getElementById('modeBtn'); 
+            if (isEditMode) { 
+                btn.textContent = '▶ Lancer la Course'; 
+                btn.className = 'primary'; 
+                stopRace(); 
+                centerCameraOnTrack();
+            } else { 
+                btn.textContent = '🛠 Mode Édition'; 
+                btn.className = 'success'; 
+                document.getElementById('leaderboardTitle').textContent = "Grille & Positions"; 
+                startRace(); 
+            } 
+            draw(); 
+        }
+
+        function updateMarbleCount(val) { numMarbles = parseInt(val); document.getElementById('marbleCountVal').textContent = numMarbles; createMarbles(); draw(); }
+        function updateTotalLaps(val) { totalLaps = Math.max(1, Math.min(100, parseInt(val) || 1)); document.getElementById('totalLapsInput').value = totalLaps; resetRace(); }
+        function startRace() { podiumOverlay.style.display = 'none'; raceFinished = false; isQualifying = false; buildPhysicsWalls(); createMarbles(true); raceRunning = true; raceStartTime = performance.now(); marbles.forEach(m => { m.lapStartTime = raceStartTime; }); runEngine(); }
+        function stopRace() { raceRunning = false; if (animFrameId) cancelAnimationFrame(animFrameId); }
+        function resetRace() { stopRace(); podiumOverlay.style.display = 'none'; raceFinished = false; isQualifying = false; document.getElementById('leaderboardTitle').textContent = "Grille & Positions"; document.getElementById('timer').textContent = "00:00.000"; createMarbles(); if (!isEditMode) startRace(); draw(); }
+        function clearTrack() { if (confirm("Effacer le circuit complet ?")) { grid.clear(); buildPhysicsWalls(); createMarbles(); draw(); } }
+        
+        function toggleMarbleDetails(index) {
+            const details = document.getElementById(`marble-details-${index}`);
+            const btn = document.getElementById(`marble-more-${index}`);
+            if (!details || !btn) return;
+            const open = details.classList.toggle('open');
+            btn.textContent = open ? '−' : '+';
+            btn.title = open ? 'Masquer les détails' : 'Afficher les détails';
+        }
+
+        // Met à jour immédiatement le journal d'une bille déjà ouvert.
+        // On ne reconstruit pas toute la grille : le + reste donc ouvert.
+        function refreshOpenMarbleJournal(m) {
+            const detail = document.querySelector(`.rank-details[data-marble-id="${m.id}"]`);
+            if (!detail || !detail.classList.contains('open')) return;
+            detail.innerHTML = buildMarbleDetails(m);
+        }
+
+        function formatRaceTime(ms) {
+            if (!Number.isFinite(ms)) return '--:--.---';
+            return `${String(Math.floor(ms / 60000)).padStart(2,'0')}:` +
+                   `${String(Math.floor((ms % 60000) / 1000)).padStart(2,'0')}.` +
+                   `${String(Math.floor(ms % 1000)).padStart(3,'0')}`;
+        }
+
+        function buildMarbleDetails(m) {
+            const h = m.history || { checkpointLog: [] };
+            const log = h.checkpointLog || [];
+
+            let html = `<div class="detail-title">📋 Journal de ${m.name}</div>`;
+
+            if (!log.length) {
+                html += `<div class="detail-line" style="color:#94a3b8;">Aucun checkpoint rencontré.</div>`;
+                return html;
+            }
+
+            // Affichage séparé par tour : on montre exactement ce que la bille
+            // a rencontré, dans l'ordre, sans parler d'anomalie ou de mauvaise direction.
+            const byLap = new Map();
+            log.forEach(item => {
+                if (!byLap.has(item.lap)) byLap.set(item.lap, []);
+                byLap.get(item.lap).push(item);
+            });
+
+            byLap.forEach((items, lap) => {
+                const sequence = items.map(item => `CP${item.cp}`).join(' → ');
+                html += `<div class="detail-line" style="margin-top:6px;"><b>Tour ${lap}</b></div>`;
+                html += `<div class="detail-line" style="color:#cbd5e1; line-height:1.7;">${sequence}</div>`;
+            });
+
+            return html;
+        }
+
+        function isValidFinisherForPodium(m) {
+            if (!m.finished || m.lapsCompleted < totalLaps) return false;
+            const max = getMaxCheckpoint();
+            if (max === 0) return true;
+            const lastLap = (m.history?.checkpoints || []).filter(x => x.lap === totalLaps).map(x => x.cp);
+            return lastLap.length === max && lastLap.every((cp, i) => cp === i + 1);
+        }
+
+        function updateLeaderboardUI() {
+            const list = document.getElementById('rankList');
+
+            // Si un journal est ouvert, on mémorise la bille concernée.
+            // Le classement peut changer après un CP, donc l'index n'est pas fiable.
+            const openDetails = list.querySelector('.rank-details.open');
+            const openMarbleId = openDetails
+                ? openDetails.parentElement?.dataset.marbleId
+                : null;
+
+            list.innerHTML = '';
+
+            const maxCp = getMaxCheckpoint();
+
+            const getPassedCheckpoints = (m) => {
+                if (maxCp === 0) return 0;
+                return Math.min(
+                    Math.max((m.nextCheckpoint || 1) - 1, 0),
+                    maxCp
+                );
+            };
+
+            let sorted = [...marbles].sort((a, b) => {
+                const aFinished = isValidFinisherForPodium(a);
+                const bFinished = isValidFinisherForPodium(b);
+                if (aFinished !== bFinished) return aFinished ? -1 : 1;
+                if (aFinished && bFinished) {
+                    return (a.finishTime ?? Infinity) - (b.finishTime ?? Infinity);
+                }
+                if (a.lapsCompleted !== b.lapsCompleted) {
+                    return b.lapsCompleted - a.lapsCompleted;
+                }
+                const cpA = getPassedCheckpoints(a);
+                const cpB = getPassedCheckpoints(b);
+                if (cpA !== cpB) return cpB - cpA;
+                return (a.lastCheckpointTime || Infinity) -
+                       (b.lastCheckpointTime || Infinity);
+            });
+
+            sorted.forEach((m, index) => {
+                const li = document.createElement('li');
+                li.className = 'rank-item-wrap';
+                li.dataset.marbleId = String(m.id);
+
+                const passedCp = getPassedCheckpoints(m);
+                const cpStatus = maxCp > 0 ? ` | CP: ${passedCp}/${maxCp}` : '';
+
+                let statsHtml =
+                    `<div class="rank-stats">` +
+                    `<span style="color:#38bdf8;font-weight:bold;">` +
+                    `Tours : ${m.lapsCompleted} / ${totalLaps}${cpStatus}` +
+                    `</span>`;
+
+                if (m.bestLapTime) {
+                    statsHtml += `<span>Best: ${(m.bestLapTime / 1000).toFixed(3)}s</span>`;
+                }
+                statsHtml += `</div>`;
+
+                li.innerHTML = `
+                    <div class="rank-item">
+                        <div style="display:flex;align-items:center;gap:8px;">
+                            <div class="rank-badge" style="background:${m.color};">${m.id}</div>
+                            <b>P${index + 1}</b> (${m.name})
+                        </div>
+                        ${statsHtml}
+                        <button id="marble-more-${index}" class="rank-more-btn"
+                                title="Afficher les détails"
+                                onclick="toggleMarbleDetails(${index})">+</button>
+                    </div>
+                    <div id="marble-details-${index}" data-marble-id="${m.id}" class="rank-details">
+                        ${buildMarbleDetails(m)}
+                    </div>`;
+
+                list.appendChild(li);
+
+                // Si ce journal était ouvert avant le rafraîchissement,
+                // on le rouvre automatiquement sur la même bille.
+                if (openMarbleId === String(m.id)) {
+                    const details = li.querySelector('.rank-details');
+                    const btn = li.querySelector('.rank-more-btn');
+                    if (details && btn) {
+                        details.classList.add('open');
+                        btn.textContent = '−';
+                        btn.title = 'Masquer les détails';
+                    }
+                }
+            });
+        }
+
+        function triggerPodiumAnimation() {
+            podiumOverlay.style.display = 'flex';
+            // Le podium est basé exclusivement sur les concurrents
+            // qui ont réellement franchi la ligne d'arrivée. Dès que 3 billes
+            // sont arrivées, ces trois places sont définitives.
+            let sorted = [...marbles]
+                .filter(m => isValidFinisherForPodium(m) && Number.isFinite(m.finishTime))
+                .sort((a, b) => a.finishTime - b.finishTime);
+            let container = document.getElementById('podiumStepsContainer');
+            container.innerHTML = '';
+            
+            const createStep = (marble, pos, heightClass) => {
+                if (!marble) return '';
+                return `<div class="podium-col ${heightClass}">
+                            <div class="podium-ball-avatar" style="background:${marble.color};">${marble.id}</div>
+                            <div style="font-size:1.5rem; margin-bottom:4px;">${pos === 1 ? '🥇' : pos === 2 ? '🥈' : '🥉'}</div>
+                            <div>P${pos}</div>
+                            <div class="podium-name">${marble.name}</div>
+                        </div>`;
+            };
+
+            container.innerHTML = createStep(sorted[1], 2, 'podium-2') + createStep(sorted[0], 1, 'podium-1') + createStep(sorted[2], 3, 'podium-3');
+            
+            let remList = document.getElementById('podiumRemainingList');
+            remList.innerHTML = '';
+
+            // Si plusieurs billes ont franchi la ligne dans la même frame,
+            // afficher aussi les éventuels P4, P5, etc. déjà arrivés.
+            for (let i = 3; i < sorted.length; i++) {
+                remList.innerHTML += `<div style="display:flex; justify-content:space-between; margin-bottom:4px; padding-bottom:4px; border-bottom:1px solid #334155;">
+                    <span style="color:${sorted[i].color}; font-weight:bold;">${sorted[i].name}</span>
+                    <span>P${i + 1} - ${(sorted[i].finishTime / 1000).toFixed(3)}s</span>
+                </div>`;
+            }
+
+            // Les autres concurrents n'ont pas encore terminé : ils ne peuvent
+            // plus modifier le podium et la course est donc arrêtée.
+            const stillRacing = marbles.filter(m => !m.finished);
+            if (stillRacing.length > 0) {
+                remList.innerHTML += `<div style="margin-top:6px; padding-top:6px; color:#64748b; border-top:1px solid #334155;">
+                    ${stillRacing.length} bille${stillRacing.length > 1 ? 's' : ''} encore en course
+                </div>`;
+            }
+        }
+        
+        function closePodiumAndReset() { podiumOverlay.style.display = 'none'; resetRace(); }
+        
+        function exportTrack() { 
+            const blob = new Blob([JSON.stringify(Array.from(grid.entries()), null, 2)], { type: 'application/json' }); 
+            const url = URL.createObjectURL(blob); 
+            const a = document.createElement('a'); 
+            a.href = url; 
+            a.download = 'circuit.json'; 
+            a.click(); 
+            URL.revokeObjectURL(url); 
+        }
+
+        function triggerImport() { document.getElementById('importInput').click(); }
+
+        function importTrackFile(event) { 
+            const file = event.target.files[0]; 
+            if (!file) return; 
+            const reader = new FileReader(); 
+            reader.onload = function(e) { 
+                try { 
+                    const data = JSON.parse(e.target.result); 
+                    grid.clear(); 
+                    data.forEach(([k, v]) => grid.set(k, v)); 
+                    buildPhysicsWalls(); 
+                    createMarbles(); 
+                    centerCameraOnTrack();
+                } catch (err) { 
+                    alert('Erreur import'); 
+                } 
+            }; 
+            reader.readAsText(file); 
+            event.target.value = ''; 
+        }
+        
+        function startQualifying() {
+            stopRace();
+            isQualifying = true; qualifMarbleIndex = 0; qualifTimesMap = {}; raceFinished = false; podiumOverlay.style.display = 'none';
+            document.getElementById('leaderboardTitle').textContent = "Qualifications en cours...";
+            document.getElementById('timer').textContent = "00:00.000";
+            buildPhysicsWalls(); spawnNextQualifMarble();
+        }
+
+        function spawnNextQualifMarble() {
+            if (qualifMarbleIndex >= numMarbles) {
+                isQualifying = false;
+                marbles.sort((a, b) => (qualifTimesMap[a.id] || Infinity) - (qualifTimesMap[b.id] || Infinity));
+                document.getElementById('leaderboardTitle').textContent = "Grille de Départ Prête";
+                createMarbles(true); draw(); return;
+            }
+            
+            marbles.forEach(m => World.remove(engine.world, m.body)); marbles = [];
+            let startPos = null; grid.forEach((val, key) => { if (val.type.startsWith('start_finish')) { const [col, row] = key.split(',').map(Number); startPos = getCellCenter(col, row); } });
+            if (!startPos) startPos = { x: 200, y: 200 };
+            
+            const idx = qualifMarbleIndex;
+            const body = Bodies.circle(startPos.x, startPos.y, 8, { restitution: 0.5, friction: 0.0001, frictionAir: 0.0006, density: 0.008 });
+            World.add(engine.world, body);
+            
+            currentQualifMarble = { 
+                id: idx + 1, 
+                name: MARBLE_NAMES[idx % MARBLE_NAMES.length], // Assignation du nom en qualification
+                color: MARBLE_COLORS[idx % MARBLE_COLORS.length], 
+                body, 
+                lapsCompleted: 0, 
+                bestLapTime: null, 
+                lapStartTime: performance.now(), 
+                lastLapTime: 0, 
+                finished: false, 
+                nextCheckpoint: 1,
+                lapValidatedCheckpoints: [],
+                lastCheckpointTime: 0,
+                history: {
+                    checkpoints: [],
+                    cells: [],
+                    events: [],
+                    lastTileKey: null,
+                    lastTileTime: 0,
+                    offTrackSince: null
+                }
+            };
+            marbles.push(currentQualifMarble);
+            
+            raceRunning = true; raceStartTime = performance.now(); currentQualifMarble.lapStartTime = raceStartTime;
+            if (!animFrameId) runEngine();
+        }
+
+        function loadDemoTrack() {
+            grid.clear();
+            const demo = [
+                { col: 3, row: 2, type: 'turn_tl', elevation: 100, checkpoint: null }, { col: 4, row: 2, type: 'start_finish_h', elevation: 90, checkpoint: null },
+                { col: 5, row: 2, type: 'turn_tr', elevation: 80, checkpoint: 1 }, { col: 5, row: 3, type: 'straight_v', elevation: 70, checkpoint: null },
+                { col: 5, row: 4, type: 'turn_br', elevation: 60, checkpoint: 2 }, { col: 4, row: 4, type: 'straight_h', elevation: 50, checkpoint: null },
+                { col: 3, row: 4, type: 'turn_bl', elevation: 40, checkpoint: 3 }, { col: 3, row: 3, type: 'escalator_u', elevation: 10, checkpoint: null }
+            ];
+            demo.forEach(d => grid.set(`${d.col},${d.row}`, { type: d.type, elevation: d.elevation, checkpoint: d.checkpoint }));
+            applyAutoSlope();
+            centerCameraOnTrack();
+        }
+
+        resize();
+        loadDemoTrack();
+    </script>
+</body>
+</html>
