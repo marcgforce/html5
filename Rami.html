@@ -1,0 +1,2394 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rami</title>
+
+<style>
+  :root {
+    --felt: #1a4a2e;
+    --felt-light: #215c38;
+    --felt-dark: #0f2d1a;
+    --gold: #c9a84c;
+    --gold-light: #e8c96a;
+    --ivory: #f5f0e8;
+    --red-card: #c0392b;
+    --text-light: #f0e8d5;
+    --shadow: rgba(0,0,0,0.6);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: Georgia, 'Times New Roman', serif;
+    background: radial-gradient(ellipse at center, var(--felt-light) 0%, var(--felt) 50%, var(--felt-dark) 100%);
+    min-height: 100vh;
+    color: var(--text-light);
+    user-select: none;
+    overflow-x: hidden;
+  }
+
+  /* Texture feutre */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: repeating-linear-gradient(
+      45deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.03) 2px,
+      rgba(0,0,0,0.03) 4px
+    );
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  #app { position: relative; z-index: 1; }
+
+  /* --- ÉCRAN TITRE --- */
+  #screen-title {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    min-height: 100vh; gap: 2rem; text-align: center; padding: 2rem;
+  }
+  .title-logo {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: clamp(4rem, 12vw, 9rem);
+    font-weight: 900;
+    color: var(--gold);
+    text-shadow: 0 0 40px rgba(201,168,76,0.4), 3px 3px 0 rgba(0,0,0,0.5);
+    letter-spacing: 0.05em;
+    animation: titlePulse 3s ease-in-out infinite;
+  }
+  @keyframes titlePulse {
+    0%,100% { text-shadow: 0 0 40px rgba(201,168,76,0.4), 3px 3px 0 rgba(0,0,0,0.5); }
+    50% { text-shadow: 0 0 80px rgba(201,168,76,0.7), 3px 3px 0 rgba(0,0,0,0.5); }
+  }
+  .title-sub {
+    font-size: 1.3rem; color: var(--ivory); opacity: 0.7; font-style: italic; letter-spacing: 0.2em;
+  }
+  .decorative-line {
+    width: 200px; height: 2px;
+    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  }
+  .btn-primary {
+    background: linear-gradient(135deg, var(--gold) 0%, var(--gold-light) 50%, var(--gold) 100%);
+    color: #1a0a00;
+    border: none; cursor: pointer;
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 1.3rem; font-weight: 700;
+    padding: 1rem 3rem;
+    letter-spacing: 0.1em;
+    clip-path: polygon(10px 0%, calc(100% - 10px) 0%, 100% 50%, calc(100% - 10px) 100%, 10px 100%, 0% 50%);
+    transition: all 0.2s;
+    box-shadow: 0 4px 20px rgba(201,168,76,0.4);
+  }
+  .btn-primary:hover { transform: scale(1.05); box-shadow: 0 6px 30px rgba(201,168,76,0.6); }
+
+  .rules-box {
+    background: rgba(0,0,0,0.35);
+    border: 1px solid rgba(201,168,76,0.3);
+    border-radius: 8px;
+    padding: 1.5rem 2rem;
+    max-width: 500px;
+    text-align: left;
+    font-size: 0.95rem;
+    line-height: 1.8;
+    color: var(--ivory);
+    opacity: 0.85;
+  }
+  .rules-box h3 {
+    font-family: Georgia, 'Times New Roman', serif;
+    color: var(--gold);
+    margin-bottom: 0.8rem;
+    font-size: 1.1rem;
+  }
+
+  /* --- ZONE DE JEU --- */
+  #screen-game { display: none; flex-direction: column; min-height: 100vh; padding: 0.5rem; gap: 0.5rem; }
+
+  /* HUD */
+  .hud {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0.5rem 1rem;
+    background: rgba(0,0,0,0.4);
+    border-radius: 8px;
+    border: 1px solid rgba(201,168,76,0.25);
+    flex-wrap: wrap; gap: 0.5rem;
+  }
+  .hud-info { display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap; }
+  .hud-stat { text-align: center; }
+  .hud-stat .label { font-size: 0.65rem; letter-spacing: 0.15em; opacity: 0.6; text-transform: uppercase; }
+  .hud-stat .value { font-family: Georgia, 'Times New Roman', serif; font-size: 1.2rem; color: var(--gold); }
+  .btn-sm {
+    background: rgba(201,168,76,0.15);
+    border: 1px solid var(--gold);
+    color: var(--gold);
+    padding: 0.3rem 0.8rem;
+    cursor: pointer;
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 0.85rem;
+    border-radius: 4px;
+    transition: all 0.2s;
+  }
+  .btn-sm:hover { background: rgba(201,168,76,0.3); }
+  .btn-sm:disabled { opacity: 0.35; cursor: not-allowed; }
+
+  /* ZONE ADVERSAIRE */
+  .opponent-zone {
+    background: rgba(0,0,0,0.2);
+    border-radius: 8px;
+    padding: 0.5rem;
+    border: 1px solid rgba(255,255,255,0.08);
+  }
+  .zone-label {
+    font-size: 0.7rem; letter-spacing: 0.15em; text-transform: uppercase;
+    opacity: 0.55; margin-bottom: 0.3rem;
+  }
+  .opponent-hand {
+    display: flex; gap: -8px; flex-wrap: nowrap; overflow: hidden; height: 70px;
+    align-items: center;
+  }
+
+  /* ZONE CENTRALE */
+  .center-zone {
+    display: flex; gap: 1rem; align-items: flex-start; flex-wrap: wrap;
+  }
+  .pile-section { display: flex; gap: 0.8rem; align-items: center; }
+  .pile-label-wrap { display: flex; flex-direction: column; align-items: center; gap: 0.3rem; }
+  .pile-label { font-size: 0.65rem; letter-spacing: 0.12em; opacity: 0.5; text-transform: uppercase; }
+
+  /* ZONE DE POSE (combinaisons sur table) */
+  .melds-area {
+    flex: 1;
+    display: flex; flex-wrap: wrap; gap: 0.5rem; align-content: flex-start;
+    min-height: 100px;
+    background: rgba(0,0,0,0.15);
+    border-radius: 8px;
+    padding: 0.5rem;
+    border: 1px dashed rgba(201,168,76,0.2);
+  }
+  .melds-area-label { font-size: 0.65rem; letter-spacing: 0.12em; opacity: 0.4; text-transform: uppercase; margin-bottom: 0.3rem; }
+
+  .meld-group {
+    display: flex; gap: 1px;
+    background: rgba(0,0,0,0.3);
+    border-radius: 6px;
+    padding: 3px;
+    border: 1px solid rgba(201,168,76,0.3);
+    cursor: pointer;
+    transition: border-color 0.2s;
+  }
+  .meld-group:hover { border-color: var(--gold); }
+  .meld-group.highlight { border-color: #44ff88; box-shadow: 0 0 8px rgba(68,255,136,0.4); }
+
+  /* MAIN DU JOUEUR */
+  .player-zone {
+    background: rgba(0,0,0,0.25);
+    border-radius: 8px;
+    padding: 0.6rem;
+    border: 1px solid rgba(201,168,76,0.2);
+  }
+  .player-hand {
+    display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; min-height: 80px; align-items: flex-end;
+  }
+
+  /* BOUTONS D'ACTION */
+  .action-bar {
+    display: flex; gap: 0.5rem; justify-content: center; flex-wrap: wrap; padding: 0.3rem;
+  }
+  .btn-action {
+    background: linear-gradient(135deg, #2a6040, #1a4a2e);
+    border: 1px solid var(--gold);
+    color: var(--gold);
+    padding: 0.5rem 1.2rem;
+    cursor: pointer;
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 0.95rem;
+    border-radius: 6px;
+    transition: all 0.2s;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+  }
+  .btn-action:hover:not(:disabled) { background: linear-gradient(135deg, #3a7050, #2a5a3e); transform: translateY(-1px); }
+  .btn-action:disabled { opacity: 0.3; cursor: not-allowed; transform: none; }
+  .btn-action.danger { background: linear-gradient(135deg, #5a1a1a, #3a0a0a); border-color: #c0392b; color: #e07070; }
+  .btn-action.danger:hover:not(:disabled) { background: linear-gradient(135deg, #7a2a2a, #5a1a1a); }
+
+  /* CARTE */
+  .card {
+    width: 54px; height: 80px;
+    border-radius: 6px;
+    border: 1px solid rgba(0,0,0,0.3);
+    cursor: pointer;
+    position: relative;
+    transition: transform 0.15s, box-shadow 0.15s;
+    flex-shrink: 0;
+    font-size: 0;
+    background: white;
+    box-shadow: 1px 2px 6px rgba(0,0,0,0.5);
+    display: flex; flex-direction: column; justify-content: space-between;
+    overflow: hidden;
+  }
+  .card:hover { transform: translateY(-6px); box-shadow: 2px 8px 16px rgba(0,0,0,0.6); }
+  .card.selected { transform: translateY(-12px); box-shadow: 0 12px 24px rgba(201,168,76,0.5); outline: 2px solid var(--gold); }
+  .card.back {
+    background: linear-gradient(135deg, #1a2a6c, #b21f1f, #1a2a6c);
+    cursor: pointer;
+  }
+  .card.back::after {
+    content: '♦';
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    font-size: 2rem; color: rgba(255,255,255,0.15);
+  }
+  .card-corner { padding: 2px 3px; line-height: 1; }
+  .card-corner.tl { position: absolute; top: 2px; left: 3px; }
+  .card-corner.br { position: absolute; bottom: 2px; right: 3px; transform: rotate(180deg); }
+  .card-rank { font-family: Georgia, 'Times New Roman', serif; font-size: 0.85rem; font-weight: 700; display: block; line-height: 1; }
+  .card-suit { font-size: 0.7rem; display: block; line-height: 1; }
+  .card-center { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; }
+  .red { color: var(--red-card); }
+  .black { color: #1a1a1a; }
+  .joker-card { background: linear-gradient(135deg, #ffd700, #ff6b6b, #6b6bff, #ffd700); }
+  .joker-card .card-rank, .joker-card .card-suit, .joker-card .card-center { color: white; text-shadow: 0 1px 3px rgba(0,0,0,0.7); }
+
+  /* Cartes dos (adversaire) */
+  .mini-back {
+    width: 38px; height: 58px;
+    border-radius: 4px;
+    background: linear-gradient(135deg, #1a2a6c, #b21f1f, #1a2a6c);
+    border: 1px solid rgba(255,255,255,0.2);
+    box-shadow: 1px 2px 4px rgba(0,0,0,0.5);
+    margin-left: -14px;
+  }
+  .mini-back:first-child { margin-left: 0; }
+
+  /* Debug mode */
+  .debug-ai-card {
+    width: 38px !important; height: 56px !important;
+    cursor: default !important; margin-left: 1px;
+  }
+  .debug-ai-card:hover { transform: none !important; box-shadow: 1px 2px 6px rgba(0,0,0,0.5) !important; }
+  .debug-ai-card .card-rank { font-size: 0.62rem !important; }
+  .debug-ai-card .card-suit { font-size: 0.5rem !important; }
+  .debug-ai-card .card-center { font-size: 0.9rem !important; }
+  .opponent-hand.debug-hand { height: auto !important; flex-wrap: wrap !important; gap: 2px !important; overflow: visible !important; }
+  #debug-panel {
+    background: rgba(0,0,0,0.75);
+    border: 1px solid rgba(255,200,0,0.35);
+    border-radius: 8px; padding: 0.5rem 0.7rem;
+    font-family: monospace; font-size: 0.72rem; color: rgba(240,232,213,0.85);
+  }
+  #debug-panel .db-title {
+    color: #ffcc00; font-weight: bold; margin-bottom: 0.3rem; font-size: 0.78rem;
+  }
+  #debug-log { max-height: 130px; overflow-y: auto; }
+  .db-line { padding: 2px 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
+  .db-line.db-pose { color: #44cc77; }
+  .db-line.db-pass { color: #e07070; }
+  .db-line.db-draw { color: #88bbff; }
+  .db-line.db-discard { color: #ffaa44; }
+  .btn-sm.debug-on { border-color: #ffcc00 !important; color: #ffcc00 !important; background: rgba(255,200,0,0.15) !important; }
+
+  /* Pile pioche */
+  .card-pile {
+    position: relative; width: 54px; height: 80px;
+  }
+  .card-pile .card-stack {
+    position: absolute;
+  }
+  .card-pile .card-stack:nth-child(1) { top: 0; left: 0; }
+  .card-pile .card-stack:nth-child(2) { top: -2px; left: -2px; }
+  .card-pile .card-stack:nth-child(3) { top: -4px; left: -4px; }
+
+  /* MESSAGES */
+  #message-bar {
+    text-align: center;
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 1rem;
+    color: var(--gold);
+    min-height: 1.5rem;
+    padding: 0.2rem;
+    font-style: italic;
+  }
+
+  /* MODALE FIN */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.75);
+    z-index: 100;
+    align-items: center; justify-content: center;
+  }
+  .modal-overlay.show { display: flex; }
+  .modal-box {
+    background: linear-gradient(135deg, var(--felt-light), var(--felt-dark));
+    border: 2px solid var(--gold);
+    border-radius: 12px;
+    padding: 2rem 1.5rem;
+    text-align: center;
+    max-width: 420px; width: 92%;
+    box-shadow: 0 0 60px rgba(201,168,76,0.3);
+    box-sizing: border-box;
+  }
+  .modal-box h2 {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 2.2rem; color: var(--gold); margin-bottom: 0.4rem;
+  }
+  .modal-box p { font-size: 0.95rem; margin-bottom: 1rem; opacity: 0.85; line-height: 1.8; }
+  .score-display {
+    display: flex; flex-wrap: wrap; gap: 0.5rem;
+    justify-content: center; margin: 0.8rem 0;
+    width: 100%;
+  }
+  .score-card {
+    background: rgba(0,0,0,0.3); border: 1px solid rgba(201,168,76,0.3);
+    border-radius: 8px; padding: 0.6rem 0.8rem;
+    flex: 1 1 80px; min-width: 70px; max-width: 110px;
+    box-sizing: border-box;
+  }
+  .score-card .name { font-size: 0.65rem; opacity: 0.6; text-transform: uppercase; letter-spacing: 0.08em; }
+  .score-card .pts { font-family: Georgia, 'Times New Roman', serif; font-size: 1.6rem; color: var(--gold); }
+
+  /* Notification flottante */
+  .floating-msg {
+    position: fixed; top: 35%; left: 50%; transform: translateX(-50%);
+    background: rgba(0,0,0,0.85); border: 1px solid var(--gold);
+    border-radius: 8px; padding: 0.8rem 1.5rem;
+    font-family: Georgia, 'Times New Roman', serif; color: var(--gold); font-size: 1.1rem;
+    z-index: 50; pointer-events: none;
+    animation: floatUp 2.8s ease forwards;
+  }
+  @keyframes floatUp {
+    0%   { opacity: 0; transform: translateX(-50%) translateY(0px); }
+    12%  { opacity: 1; transform: translateX(-50%) translateY(-10px); }
+    70%  { opacity: 1; transform: translateX(-50%) translateY(-80px); }
+    100% { opacity: 0; transform: translateX(-50%) translateY(-140px); }
+  }
+
+  /* Séparateur */
+  .sep { width: 100%; height: 1px; background: linear-gradient(90deg, transparent, rgba(201,168,76,0.2), transparent); margin: 0.2rem 0; }
+
+  /* Zone de staging première pose */
+  #first-meld-staging {
+    display: none;
+    background: rgba(201,168,76,0.06);
+    border: 2px dashed rgba(201,168,76,0.4);
+    border-radius: 6px;
+    padding: 0.6rem;
+    margin-top: 0.4rem;
+  }
+  #first-meld-staging.active { display: block; }
+  .staging-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 0.4rem; flex-wrap: wrap; gap: 0.4rem;
+  }
+  .staging-title {
+    font-size: 0.8rem; color: var(--gold); letter-spacing: 0.1em; text-transform: uppercase;
+  }
+  .staging-pts {
+    font-size: 0.85rem; color: var(--ivory); opacity: 0.8;
+  }
+  .staging-pts span { color: var(--gold); font-weight: bold; }
+  .staging-groups {
+    display: flex; flex-wrap: wrap; gap: 0.5rem; min-height: 48px; align-items: center;
+  }
+  .staging-group {
+    display: flex; gap: 1px;
+    background: rgba(0,0,0,0.3);
+    border-radius: 5px; padding: 2px;
+    border: 1px solid rgba(201,168,76,0.4);
+    cursor: pointer;
+    position: relative;
+  }
+  .staging-group:hover { border-color: #e07070; }
+  .staging-group::after {
+    content: '✕';
+    position: absolute; top: -7px; right: -7px;
+    background: #c0392b; color: white;
+    border-radius: 50%; width: 16px; height: 16px;
+    font-size: 0.6rem; display: flex; align-items: center; justify-content: center;
+    line-height: 1;
+  }
+  .staging-empty { font-size: 0.8rem; opacity: 0.35; font-style: italic; }
+  .staging-actions { display: flex; gap: 0.4rem; margin-top: 0.5rem; flex-wrap: wrap; }
+  .btn-staging {
+    background: rgba(201,168,76,0.15); border: 1px solid var(--gold);
+    color: var(--gold); padding: 0.3rem 0.8rem;
+    cursor: pointer; font-family: Georgia,'Times New Roman',serif;
+    font-size: 0.82rem; border-radius: 4px; transition: all 0.2s;
+  }
+  .btn-staging:hover { background: rgba(201,168,76,0.3); }
+  .btn-staging.confirm { background: rgba(40,160,80,0.2); border-color: #44cc77; color: #44cc77; }
+  .btn-staging.confirm:hover { background: rgba(40,160,80,0.35); }
+  .btn-staging.cancel { background: rgba(160,40,40,0.2); border-color: #e07070; color: #e07070; }
+  .btn-staging.cancel:hover { background: rgba(160,40,40,0.35); }
+
+  /* Conditions de validation staging */
+  .staging-conditions {
+    display: flex; gap: 0.6rem; flex-wrap: wrap; margin-bottom: 0.5rem;
+  }
+  .cond-item {
+    display: flex; align-items: center; gap: 0.4rem;
+    padding: 0.3rem 0.7rem; border-radius: 20px;
+    font-size: 0.82rem; font-family: Georgia, 'Times New Roman', serif;
+    border: 1px solid; transition: all 0.3s;
+  }
+  .cond-item.ok {
+    background: rgba(40,160,80,0.15); border-color: rgba(68,204,119,0.5); color: #44cc77;
+  }
+  .cond-item.nok {
+    background: rgba(180,40,40,0.12); border-color: rgba(200,80,80,0.4); color: #e07070;
+  }
+  .cond-item.nok .cond-hint {
+    font-size: 0.75rem; opacity: 0.85; font-style: italic;
+  }
+
+  .turn-indicator {
+    display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+    background: var(--gold); margin-right: 6px;
+    animation: blink 1s ease-in-out infinite;
+  }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  .highlight-draw { animation: drawPulse 0.5s ease; }
+  @keyframes drawPulse { 0%{transform:scale(1)} 50%{transform:scale(1.08)} 100%{transform:scale(1)} }
+
+  /* tooltip */
+  [title] { cursor: help; }
+
+  /* Boutons sélection nb IA */
+  .btn-ai-count {
+    background: rgba(201,168,76,0.1); border: 1px solid rgba(201,168,76,0.4);
+    color: var(--ivory); padding: 0.4rem 1rem;
+    cursor: pointer; font-family: Georgia,'Times New Roman',serif;
+    font-size: 0.95rem; border-radius: 6px; transition: all 0.2s;
+  }
+  .btn-ai-count:hover { background: rgba(201,168,76,0.25); }
+  .btn-ai-count.active-ai {
+    background: linear-gradient(135deg,var(--gold),var(--gold-light));
+    color: #1a0a00; font-weight: 700; border-color: var(--gold);
+    box-shadow: 0 2px 12px rgba(201,168,76,0.4);
+  }
+
+  /* Zones adversaires multiples */
+  .opponents-row {
+    display: flex; gap: 0.5rem; flex-wrap: wrap;
+  }
+  .opponent-zone { flex: 1; min-width: 0; }
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- ÉCRAN TITRE -->
+<div id="screen-title">
+  <div class="title-logo">Rami</div>
+  <div class="decorative-line"></div>
+  <div class="title-sub" id="title-sub">2 × 52 cartes · Avec Jokers</div>
+
+  <!-- Sélecteur nombre de joueurs IA -->
+  <div style="display:flex;flex-direction:column;align-items:center;gap:0.6rem;background:rgba(0,0,0,0.3);border:1px solid rgba(201,168,76,0.3);border-radius:12px;padding:0.8rem 1.5rem;">
+    <span style="font-family:Georgia,'Times New Roman',serif;font-size:0.85rem;color:var(--ivory);opacity:0.6;letter-spacing:0.15em;text-transform:uppercase;">Adversaires IA</span>
+    <div style="display:flex;gap:0.5rem;">
+      <button onclick="setAiCount(1)" id="ai-btn-1" class="btn-ai-count active-ai">1 IA</button>
+      <button onclick="setAiCount(2)" id="ai-btn-2" class="btn-ai-count">2 IA</button>
+      <button onclick="setAiCount(3)" id="ai-btn-3" class="btn-ai-count">3 IA</button>
+    </div>
+  </div>
+
+  <!-- Toggle Jokers -->
+  <div style="display:flex;align-items:center;gap:1rem;background:rgba(0,0,0,0.3);border:1px solid rgba(201,168,76,0.3);border-radius:40px;padding:0.5rem 1.2rem;">
+    <span style="font-family:Georgia,'Times New Roman',serif;font-size:1rem;color:var(--ivory);opacity:0.8;">Sans jokers</span>
+    <div id="joker-toggle" onclick="toggleJokers()" style="width:52px;height:28px;border-radius:14px;cursor:pointer;position:relative;background:linear-gradient(135deg,var(--gold),var(--gold-light));border:2px solid var(--gold);transition:background 0.3s;">
+      <div id="joker-knob" style="position:absolute;top:3px;width:18px;height:18px;border-radius:50%;background:white;transition:left 0.25s;box-shadow:0 1px 4px rgba(0,0,0,0.4);left:27px;"></div>
+    </div>
+    <span style="font-family:Georgia,'Times New Roman',serif;font-size:1rem;color:var(--gold);">🃏 Avec jokers</span>
+  </div>
+
+  <button class="btn-primary" onclick="startGame()">Nouvelle Partie</button>
+  <div class="rules-box">
+    <h3>♠ Règles du Rami 51</h3>
+    <ul style="list-style:none; padding:0;">
+      <li>🃏 <strong>But :</strong> Se débarrasser de toutes ses cartes</li>
+      <li>🔄 <strong>Tour :</strong> Piocher → Poser/Étendre → Défausser</li>
+      <li>🎯 <strong>1re pose :</strong> ≥ 51 pts dont une suite sans joker</li>
+      <li>📋 <strong>Poses valides :</strong></li>
+      <li>&nbsp;&nbsp;&nbsp;• Brelans/Carrés (3–4 cartes même valeur)</li>
+      <li>&nbsp;&nbsp;&nbsp;• Suites (3+ cartes même couleur, consécutives)</li>
+      <li>🃏 <strong>Joker :</strong> Remplace n'importe quelle carte <em id="rules-joker-note">(activé)</em></li>
+      <li>🏆 <strong>Rami Sec !</strong> Poser toute sa main d'un coup (×2 malus adverses)</li>
+      <li>💯 <strong>Points :</strong> Malus sur cartes restantes (non posé = 100 pts)</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ÉCRAN JEU -->
+<div id="screen-game">
+
+  <!-- HUD -->
+  <div class="hud">
+    <div class="hud-info">
+      <div class="hud-stat">
+        <div class="label">Manche</div>
+        <div class="value" id="hud-round">1</div>
+      </div>
+      <div class="hud-stat">
+        <div class="label">Malus Vous</div>
+        <div class="value" id="hud-score-player">0</div>
+      </div>
+      <div id="hud-ai-scores"></div>
+      <div class="hud-stat">
+        <div class="label">Pioche</div>
+        <div class="value" id="hud-deck">104</div>
+      </div>
+      <div class="hud-stat">
+        <div class="label">Jokers</div>
+        <div class="value" id="hud-jokers" style="font-size:0.95rem;">🃏 Oui</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+      <button class="btn-sm" onclick="sortHand()">Trier ♠♥♦♣</button>
+      <button class="btn-sm" onclick="sortByValue()">Trier par valeur</button>
+      <button class="btn-sm" id="btn-sort-asc" onclick="sortAscending()">↑ Consécutif</button>
+      <button class="btn-sm" onclick="goToTitle()">Quitter</button>
+      <button class="btn-sm" id="btn-debug" onclick="toggleDebug()">🔍 Debug</button>
+    </div>
+  </div>
+
+  <!-- ADVERSAIRES (dynamique) -->
+  <div class="opponents-row" id="opponents-row"></div>
+
+  <!-- PANNEAU DEBUG (caché par défaut) -->
+  <div id="debug-panel" style="display:none;">
+    <div class="db-title">🔍 Journal IA — décisions en temps réel</div>
+    <div id="debug-log"></div>
+  </div>
+
+  <div class="sep"></div>
+
+  <!-- ZONE CENTRALE -->
+  <div class="center-zone">
+    <div class="pile-section">
+      <div class="pile-label-wrap">
+        <div class="pile-label">Pioche</div>
+        <div class="card-pile" id="deck-pile" onclick="drawFromDeck()">
+          <div class="card back card-stack" style="position:absolute;top:-4px;left:-4px;"></div>
+          <div class="card back card-stack" style="position:absolute;top:-2px;left:-2px;"></div>
+          <div class="card back card-stack" style="position:absolute;top:0;left:0;"></div>
+        </div>
+      </div>
+      <div style="font-size:1.5rem;opacity:0.4;">→</div>
+      <div class="pile-label-wrap">
+        <div class="pile-label">Défausse</div>
+        <div id="discard-pile" onclick="drawFromDiscard()" style="cursor:pointer;"></div>
+      </div>
+    </div>
+
+    <div style="flex:1;">
+      <div class="melds-area-label">Table — combinaisons posées</div>
+      <div class="melds-area" id="melds-area">
+        <span style="opacity:0.25;font-size:0.85rem;font-style:italic;padding:0.5rem;">Aucune combinaison posée</span>
+      </div>
+      <!-- ZONE STAGING PREMIÈRE POSE (intégrée dans la table) -->
+      <div id="first-meld-staging">
+        <div class="staging-header">
+          <div class="staging-title">🎯 Première pose en cours</div>
+        </div>
+        <div id="staging-conditions"></div>
+        <div class="staging-groups" id="staging-groups">
+          <span class="staging-empty">Sélectionnez des cartes et cliquez "Poser combinaison" (≥ 51 pts dont une suite sans joker)</span>
+        </div>
+        <div class="staging-actions">
+          <button class="btn-staging confirm" id="btn-staging-confirm" onclick="confirmFirstMeld()" disabled>✅ Valider la première pose</button>
+          <button class="btn-staging cancel" onclick="cancelFirstMeld()">✕ Annuler tout</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MESSAGE -->
+  <div id="message-bar">Piochez une carte pour commencer votre tour</div>
+
+  <!-- MAIN JOUEUR -->
+  <div class="player-zone">
+    <div class="zone-label"><span class="turn-indicator" id="turn-dot"></span>Votre main — <span id="player-card-count">0</span> cartes</div>
+    <div class="player-hand" id="player-hand"></div>
+  </div>
+
+  <!-- ACTIONS -->
+  <div class="action-bar">
+    <button class="btn-action" id="btn-meld" onclick="proposeMeld()" disabled>📋 Poser combinaison</button>
+    <button class="btn-action" id="btn-extend" onclick="extendMeld()" disabled>➕ Étendre une pose</button>
+    <button class="btn-action" id="btn-reorganize" onclick="toggleReorganize()" disabled>🔀 Réorganiser</button>
+    <button class="btn-action" id="btn-discard" onclick="discardSelected()" disabled>🗑 Défausser</button>
+    <button class="btn-action danger" id="btn-rami" onclick="checkRami()" disabled>⭐ RAMI !</button>
+  </div>
+
+</div>
+
+<!-- MODALE FIN DE MANCHE -->
+<div class="modal-overlay" id="modal-end">
+  <div class="modal-box">
+    <h2 id="modal-title">Bien joué !</h2>
+    <p id="modal-subtitle">Manche terminée</p>
+    <div class="score-display" id="modal-scores"></div>
+    <button class="btn-primary" onclick="nextRound()" style="font-size:1rem;padding:0.8rem 2rem;">Manche suivante</button>
+    <br><br>
+    <button class="btn-sm" onclick="goToTitle()">Retour au menu</button>
+  </div>
+</div>
+
+</div><!-- #app -->
+
+<script>
+// ==================== DONNÉES ====================
+const SUITS = ['♠','♥','♦','♣'];
+const RANKS = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
+const SUIT_COLOR = {'♠':'black','♣':'black','♥':'red','♦':'red'};
+const RANK_VALUES = {'A':11,'2':2,'3':3,'4':4,'5':5,'6':6,'7':7,'8':8,'9':9,'10':10,'J':10,'Q':10,'K':10,'🃏':20};
+const RANK_ORDER = {'A':1,'2':2,'3':3,'4':4,'5':5,'6':6,'7':7,'8':8,'9':9,'10':10,'J':11,'Q':12,'K':13,'🃏':14};
+
+// ==================== ÉTAT ====================
+let deck = [];
+let playerHand = [];
+let aiPlayers = []; // [{hand, hasMeld, name, scores}]
+let numAI = 1;      // nb d'IA choisi sur l'écran titre
+let currentAiIdx = 0; // index de l'IA en train de jouer
+let discardPile = [];
+let melds = [];
+let selectedIndices = [];
+let phase = 'draw';
+let scores = {player: 0};  // scores.ai0, scores.ai1, scores.ai2 ajoutés dynamiquement
+let round = 1;
+let hasDrawn = false;
+let playerHasMeld = false;
+const FIRST_MELD_MIN = 51;
+let withJokers = true;
+let debugMode = false;
+let dbLogs = [];
+
+// Alias pratiques pour les fonctions IA (pointe sur l'IA courante)
+function curAI() { return aiPlayers[currentAiIdx]; }
+
+// ==================== UTILS ====================
+function uid() { return Math.random().toString(36).slice(2,9); }
+
+function cardStr(c) { return c.isJoker ? '🃏' : c.rank + c.suit; }
+
+function toggleDebug() {
+  debugMode = !debugMode;
+  const btn = document.getElementById('btn-debug');
+  btn.textContent = debugMode ? '🔍 Debug ON' : '🔍 Debug';
+  btn.classList.toggle('debug-on', debugMode);
+  document.getElementById('debug-panel').style.display = debugMode ? 'block' : 'none';
+  if (debugMode) { dbLogs = []; dbFlush(); }
+  render();
+}
+
+function dbLog(msg, type='') {
+  if (!debugMode) return;
+  dbLogs.unshift({ msg, type });
+  if (dbLogs.length > 50) dbLogs.length = 50;
+  dbFlush();
+}
+
+function dbFlush() {
+  const el = document.getElementById('debug-log');
+  if (!el) return;
+  el.innerHTML = dbLogs.map(l => `<div class="db-line ${l.type ? 'db-'+l.type : ''}">${l.msg}</div>`).join('');
+}
+
+function toggleJokers() {
+  withJokers = !withJokers;
+  const knob = document.getElementById('joker-knob');
+  const toggle = document.getElementById('joker-toggle');
+  const sub = document.getElementById('title-sub');
+  const note = document.getElementById('rules-joker-note');
+  if (withJokers) {
+    knob.style.left = '27px';
+    toggle.style.background = 'linear-gradient(135deg,var(--gold),var(--gold-light))';
+    sub.textContent = '2 × 52 cartes · Avec Jokers';
+    note.textContent = '(activé)';
+    note.style.color = '';
+  } else {
+    knob.style.left = '3px';
+    toggle.style.background = 'rgba(80,80,80,0.6)';
+    sub.textContent = '2 × 52 cartes · Sans Jokers';
+    note.textContent = '(désactivé)';
+    note.style.color = 'rgba(200,100,100,0.8)';
+  }
+}
+
+function setAiCount(n) {
+  numAI = n;
+  [1,2,3].forEach(i => {
+    const btn = document.getElementById(`ai-btn-${i}`);
+    if (btn) btn.classList.toggle('active-ai', i === n);
+  });
+}
+
+function createDeck() {
+  const d = [];
+  for (let i=0;i<2;i++) {
+    for (const s of SUITS) {
+      for (const r of RANKS) {
+        d.push({rank:r, suit:s, id:uid(), isJoker:false});
+      }
+    }
+    if (withJokers) {
+      d.push({rank:'🃏', suit:'', id:uid(), isJoker:true});
+      d.push({rank:'🃏', suit:'', id:uid(), isJoker:true});
+    }
+  }
+  return d;
+}
+
+function shuffle(arr) {
+  for (let i=arr.length-1;i>0;i--) {
+    const j=Math.floor(Math.random()*(i+1));
+    [arr[i],arr[j]]=[arr[j],arr[i]];
+  }
+  return arr;
+}
+
+function cardValue(card) { return RANK_VALUES[card.rank]||10; }
+
+// Valeur d'un groupe de cartes (pour règle 51pts première pose)
+function meldValue(cards) {
+  return cards.reduce((s,c)=>s+cardValue(c),0);
+}
+
+// Valeur totale de plusieurs melds
+function meldsValue(meldList) {
+  return meldList.reduce((s,m)=>s+meldValue(m),0);
+}
+
+// Vérifie si un ensemble de melds contient au moins une tierce franche (suite sans joker)
+function hasNaturalSuite(meldList) {
+  return meldList.some(m => isSuite(m) && !m.some(c=>c.isJoker));
+}
+function rankOrder(card) { return RANK_ORDER[card.rank]||14; }
+function suitOrder(s) { return ['♠','♥','♦','♣'].indexOf(s); }
+
+// ==================== RENDU CARTE ====================
+function renderCard(card, idx, clickFn, isSelected, small) {
+  if (!card) return '';
+  if (card.isJoker) {
+    return `<div class="card joker-card${isSelected?' selected':''}" onclick="${clickFn}(${idx})">
+      <div class="card-corner tl"><span class="card-rank">🃏</span></div>
+      <div class="card-center">★</div>
+      <div class="card-corner br"><span class="card-rank">🃏</span></div>
+    </div>`;
+  }
+  const col = SUIT_COLOR[card.suit]||'black';
+  return `<div class="card${isSelected?' selected':''}" onclick="${clickFn}(${idx})">
+    <div class="card-corner tl">
+      <span class="card-rank ${col}">${card.rank}</span>
+      <span class="card-suit ${col}">${card.suit}</span>
+    </div>
+    <div class="card-center ${col}">${card.suit}</div>
+    <div class="card-corner br">
+      <span class="card-rank ${col}">${card.rank}</span>
+      <span class="card-suit ${col}">${card.suit}</span>
+    </div>
+  </div>`;
+}
+
+function renderBack(small) {
+  return `<div class="card back"></div>`;
+}
+
+function renderMeldCard(card, represents) {
+  if (!card) return '';
+  if (card.isJoker) {
+    // Si on sait quelle carte le joker remplace, l'afficher en surimpression
+    const label = represents ? `<div style="position:absolute;bottom:2px;left:0;right:0;text-align:center;font-size:0.55rem;color:white;text-shadow:0 1px 2px rgba(0,0,0,0.9);line-height:1;">${represents}</div>` : '';
+    return `<div class="card joker-card" style="width:44px;height:66px;cursor:default;position:relative;">
+      <div class="card-corner tl"><span class="card-rank" style="font-size:0.7rem;">🃏</span></div>
+      <div class="card-center" style="font-size:1.1rem;">★</div>
+      ${label}
+    </div>`;
+  }
+  const col = SUIT_COLOR[card.suit]||'black';
+  return `<div class="card" style="width:44px;height:66px;cursor:default;">
+    <div class="card-corner tl">
+      <span class="card-rank ${col}" style="font-size:0.75rem;">${card.rank}</span>
+      <span class="card-suit ${col}" style="font-size:0.6rem;">${card.suit}</span>
+    </div>
+    <div class="card-center ${col}" style="font-size:1.1rem;">${card.suit}</div>
+    <div class="card-corner br">
+      <span class="card-rank ${col}" style="font-size:0.75rem;">${card.rank}</span>
+      <span class="card-suit ${col}" style="font-size:0.6rem;">${card.suit}</span>
+    </div>
+  </div>`;
+}
+
+// ==================== VALIDATION COMBINAISONS ====================
+function isValidMeld(cards) {
+  if (cards.length < 3) return false;
+  return isBrelan(cards) || isSuite(cards);
+}
+
+function isBrelan(cards) {
+  // 3+ cartes de même valeur ; les jokers remplacent n'importe quelle valeur
+  const nonJokers = cards.filter(c=>!c.isJoker);
+  const jokerCount = cards.filter(c=>c.isJoker).length;
+  if (nonJokers.length === 0) return cards.length >= 3; // que des jokers
+  const refRank = nonJokers[0].rank;
+  // Toutes les non-jokers doivent avoir la même valeur
+  if (!nonJokers.every(c=>c.rank===refRank)) return false;
+  // Avec 2 jeux : interdire deux cartes de la même enseigne dans le même brelan
+  const suits = nonJokers.map(c=>c.suit);
+  if (new Set(suits).size !== suits.length) return false;
+  // Max 4 cartes réelles (une par enseigne) + jokers éventuels
+  return nonJokers.length <= 4;
+}
+
+function isSuite(cards) {
+  // Suite : même enseigne, valeurs consécutives, jokers comblent les trous.
+  // L'As joue BAS (A-2-3-...) OU HAUT (...Q-K-A), jamais les deux dans la même suite.
+  const nonJokers = cards.filter(c=>!c.isJoker);
+  const jokerCount = cards.filter(c=>c.isJoker).length;
+  if (nonJokers.length === 0) return cards.length >= 3;
+
+  // Toutes les cartes réelles doivent être de la même enseigne
+  const suit = nonJokers[0].suit;
+  if (!nonJokers.every(c=>c.suit===suit)) return false;
+
+  // Rejeter les doublons de rang
+  const ranks = nonJokers.map(c=>rankOrder(c));
+  if (new Set(ranks).size !== ranks.length) return false;
+
+  // Tester une séquence d'ordres : consécutive avec au max jokerCount trous.
+  // maxAllowed : rang max autorisé (13 version basse, 14 version haute)
+  // minAllowed : rang min autorisé (1 version basse, 2 version haute car l'As est déjà en 14)
+  function tryOrders(orders, maxAllowed, minAllowed) {
+    const sorted = [...orders].sort((a,b)=>a-b);
+    let holes = 0;
+    for (let i=1;i<sorted.length;i++) {
+      const gap = sorted[i]-sorted[i-1]-1;
+      if (gap < 0) return false;
+      holes += gap;
+    }
+    if (holes > jokerCount) return false;
+    const totalLength = sorted.length + jokerCount;
+    if (totalLength < 3) return false;
+    // Jokers excédentaires (après comblement des trous) se placent aux extrémités.
+    // On teste toutes les répartitions gauche/droite possibles.
+    const extra = jokerCount - holes;
+    for (let left = 0; left <= extra; left++) {
+      const right = extra - left;
+      const leftmost = sorted[0] - left;
+      const rightmost = sorted[sorted.length-1] + right;
+      if (minAllowed !== undefined && leftmost < minAllowed) continue;
+      if (maxAllowed !== undefined && rightmost > maxAllowed) continue;
+      return true; // au moins une répartition valide trouvée
+    }
+    return false;
+  }
+
+  const hasAce = nonJokers.some(c=>c.rank==='A');
+  const baseOrders = nonJokers.map(c=>rankOrder(c)); // A=1
+
+  // Version basse : A=1 (A-2-3-...-Q-K)
+  if (tryOrders(baseOrders, 13, 1)) return true;
+
+  // Version haute : A=14 (suite se terminant sur K-A)
+  // Condition stricte : les autres cartes doivent pouvoir atteindre le K (rang 13)
+  // sinon on aurait J-Q-K-A avec As qui "saute" par-dessus, ce qui est interdit.
+  if (hasAce) {
+    const othersOrders = baseOrders.filter(v => v !== 1);
+    if (othersOrders.length === 0) {
+      // Que l'As + jokers
+      return jokerCount >= 2;
+    }
+    const maxOther = Math.max(...othersOrders);
+    // Les autres cartes doivent pouvoir former une séquence contiguë jusqu'au K(13)
+    // avant que l'As vienne en 14e position
+    if (maxOther + jokerCount < 13) return false;
+    const highOrders = [...othersOrders, 14];
+    if (tryOrders(highOrders, 14, 2)) return true;
+  }
+
+  return false;
+}
+
+function canExtend(meld, card) {
+  // Peut-on ajouter cette carte à ce meld ?
+  const newCards = [...meld.cards, card];
+  return isValidMeld(newCards);
+}
+
+// ==================== DÉMARRAGE ====================
+const AI_NAMES = ['🤖 Sophie', '🤖 Marco', '🤖 Léa'];
+
+function startGame() {
+  scores = {player: 0};
+  for (let i = 0; i < numAI; i++) scores[`ai${i}`] = 0;
+  round = 1;
+  startRound();
+}
+
+function startRound() {
+  deck = shuffle(createDeck());
+  playerHand = [];
+  aiPlayers = [];
+  for (let i = 0; i < numAI; i++) {
+    aiPlayers.push({ hand: [], hasMeld: false, name: AI_NAMES[i] });
+  }
+  discardPile = [];
+  melds = [];
+  selectedIndices = [];
+  hasDrawn = false;
+  playerHasMeld = false;
+  phase = 'draw';
+  currentAiIdx = 0;
+  stagingMelds = [];
+  const stagingEl = document.getElementById('first-meld-staging');
+  if (stagingEl) stagingEl.classList.remove('active');
+
+  // Distribuer 14 cartes à chaque joueur
+  const allPlayers = [null, ...aiPlayers]; // null = player
+  for (let i = 0; i < 14; i++) {
+    playerHand.push(deck.pop());
+    for (const ai of aiPlayers) ai.hand.push(deck.pop());
+  }
+  discardPile.push(deck.pop());
+
+  document.getElementById('screen-title').style.display = 'none';
+  document.getElementById('screen-game').style.display = 'flex';
+  document.getElementById('hud-round').textContent = round;
+  document.getElementById('hud-jokers').textContent = withJokers ? '🃏 Oui' : '✖ Non';
+
+  buildOpponentsUI();
+  updateScoreDisplay();
+  render();
+  setMessage('Piochez une carte pour commencer votre tour');
+}
+
+function buildOpponentsUI() {
+  const row = document.getElementById('opponents-row');
+  row.innerHTML = aiPlayers.map((ai, i) => `
+    <div class="opponent-zone">
+      <div class="zone-label">${ai.name} — <span id="ai-card-count-${i}">0</span> cartes
+        <span id="ai-meld-badge-${i}" style="display:none;margin-left:6px;font-size:0.65rem;color:#44cc77;">✅ posé</span>
+      </div>
+      <div class="opponent-hand" id="ai-hand-${i}"></div>
+    </div>
+  `).join('');
+}
+
+function goToTitle() {
+  document.getElementById('screen-title').style.display = '';
+  document.getElementById('screen-game').style.display = 'none';
+  document.getElementById('modal-end').classList.remove('show');
+}
+
+function nextRound() {
+  round++;
+  document.getElementById('modal-end').classList.remove('show');
+  startRound();
+}
+
+// ==================== RENDU PRINCIPAL ====================
+function render() {
+  renderPlayerHand();
+  renderAllAiHands();
+  renderDiscardPile();
+  renderMelds();
+  renderDeckCount();
+  updateButtons();
+  document.getElementById('player-card-count').textContent = playerHand.length;
+  document.getElementById('turn-dot').style.display = phase !== 'ai' ? 'inline-block' : 'none';
+}
+
+function renderPlayerHand() {
+  const el = document.getElementById('player-hand');
+  el.innerHTML = playerHand.map((c,i)=>renderCard(c, i, 'toggleSelect', selectedIndices.includes(i))).join('');
+}
+
+function renderAllAiHands() {
+  aiPlayers.forEach((ai, i) => {
+    const el = document.getElementById(`ai-hand-${i}`);
+    if (el) {
+      if (debugMode) {
+        el.classList.add('debug-hand');
+        el.innerHTML = ai.hand.map((c, j) =>
+          renderCard(c, j, 'noop', false).replace('class="card', 'class="card debug-ai-card')
+        ).join('');
+      } else {
+        el.classList.remove('debug-hand');
+        el.innerHTML = ai.hand.map(() => `<div class="mini-back"></div>`).join('');
+      }
+    }
+    const cnt = document.getElementById(`ai-card-count-${i}`);
+    if (cnt) cnt.textContent = ai.hand.length;
+    const badge = document.getElementById(`ai-meld-badge-${i}`);
+    if (badge) badge.style.display = ai.hasMeld ? 'inline' : 'none';
+  });
+}
+
+function updateScoreDisplay() {
+  document.getElementById('hud-score-player').textContent = scores.player;
+  // HUD IA scores dynamiques
+  const hudAi = document.getElementById('hud-ai-scores');
+  if (hudAi) {
+    hudAi.innerHTML = aiPlayers.map((ai, i) => `
+      <div class="hud-stat">
+        <div class="label">Malus ${ai.name.replace('🤖 ','')}</div>
+        <div class="value">${scores[`ai${i}`] ?? 0}</div>
+      </div>`).join('');
+  }
+  // Modale scores
+  const modalScores = document.getElementById('modal-scores');
+  if (modalScores) {
+    modalScores.innerHTML = `
+      <div class="score-card"><div class="name">Malus Vous</div><div class="pts">${scores.player}</div></div>
+      ${aiPlayers.map((ai,i) => `<div class="score-card"><div class="name">Malus ${ai.name.replace('🤖 ','')}</div><div class="pts">${scores[`ai${i}`] ?? 0}</div></div>`).join('')}
+    `;
+  }
+}
+
+function renderDiscardPile() {
+  const el = document.getElementById('discard-pile');
+  if (discardPile.length === 0) {
+    el.innerHTML = `<div style="width:54px;height:80px;border:2px dashed rgba(201,168,76,0.2);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:0.65rem;opacity:0.4;">vide</div>`;
+  } else {
+    const top = discardPile[discardPile.length-1];
+    el.innerHTML = renderCard(top, -1, 'noop', false);
+  }
+}
+
+function noop(){}
+
+// Retourne [{card, represents}] avec les jokers placés à leur position logique
+function sortMeldForDisplay(cards) {
+  const RANK_NAMES = ['','A','2','3','4','5','6','7','8','9','10','J','Q','K','A'];
+  const nonJokers = cards.filter(c=>!c.isJoker);
+  const jokers = cards.filter(c=>c.isJoker);
+
+  if (jokers.length === 0) {
+    let sorted;
+    if (isSuite(cards)) sorted = [...cards].sort((a,b)=>rankOrder(a)-rankOrder(b));
+    else sorted = [...cards].sort((a,b)=>suitOrder(a.suit)-suitOrder(b.suit));
+    return sorted.map(c=>({card:c, represents:null}));
+  }
+
+  if (isSuite(cards)) {
+    const suit = nonJokers[0] ? nonJokers[0].suit : '';
+    // Déterminer si l'As joue haut ou bas
+    let orders = nonJokers.map(c=>rankOrder(c));
+    const hasAce = nonJokers.some(c=>c.rank==='A');
+    let useHigh = false;
+    if (hasAce) {
+      const highOrders = orders.map(v=>v===1?14:v);
+      let holesLow=0, holesHigh=0;
+      const sortedL=[...orders].sort((a,b)=>a-b);
+      const sortedH=[...highOrders].sort((a,b)=>a-b);
+      for(let i=1;i<sortedL.length;i++) holesLow+=sortedL[i]-sortedL[i-1]-1;
+      for(let i=1;i<sortedH.length;i++) holesHigh+=sortedH[i]-sortedH[i-1]-1;
+      if (holesHigh <= holesLow) { orders = highOrders; useHigh = true; }
+    }
+
+    const sortedNJ = [...nonJokers].sort((a,b)=>{
+      const va = (rankOrder(a)===1&&useHigh)?14:rankOrder(a);
+      const vb = (rankOrder(b)===1&&useHigh)?14:rankOrder(b);
+      return va-vb;
+    });
+    const sortedOrders = sortedNJ.map(c=>(rankOrder(c)===1&&useHigh)?14:rankOrder(c));
+
+    // Calculer trous internes et jokers extras
+    let internalHoles = 0;
+    for(let i=1;i<sortedOrders.length;i++) internalHoles+=sortedOrders[i]-sortedOrders[i-1]-1;
+    const extraJokers = jokers.length - internalHoles;
+    // Les jokers excédentaires se répartissent à gauche et à droite.
+    // On maximise les jokers à gauche sans descendre sous le rang minimum valide.
+    const minRank = useHigh ? 2 : 1;
+    const maxRank = useHigh ? 14 : 13;
+    const maxLeft = sortedOrders[0] - minRank; // nb max de jokers plaçables à gauche
+    const leftExtra = Math.min(extraJokers, Math.max(0, maxLeft));
+    const rightExtra = extraJokers - leftExtra;
+    const startVal = sortedOrders[0] - leftExtra;
+    const endVal = sortedOrders[sortedOrders.length-1] + rightExtra;
+
+    // Construire la séquence position par position
+    const result = [];
+    let jokersLeft = [...jokers];
+    let realIdx = 0;
+    for (let v = startVal; v <= endVal; v++) {
+      if (realIdx < sortedNJ.length && sortedOrders[realIdx] === v) {
+        result.push({card: sortedNJ[realIdx], represents: null});
+        realIdx++;
+      } else if (jokersLeft.length > 0) {
+        const label = (v >= 1 && v <= 14) ? (RANK_NAMES[v] || '') + suit : '?';
+        result.push({card: jokersLeft.shift(), represents: label});
+      }
+    }
+    // Sécurité : si des jokers restent encore (ne devrait pas arriver), les placer à droite
+    jokersLeft.forEach((j, i) => {
+      const v = endVal + 1 + i;
+      const label = (v >= 1 && v <= 14) ? (RANK_NAMES[v] || '') + suit : '?';
+      result.push({card: j, represents: label});
+    });
+    return result;
+  }
+
+  // Brelan : jokers après les vraies cartes, label = même rang enseigne manquante
+  const refRank = nonJokers[0] ? nonJokers[0].rank : '?';
+  const usedSuits = nonJokers.map(c=>c.suit);
+  const missingSuits = ['♠','♥','♦','♣'].filter(s=>!usedSuits.includes(s));
+  const sorted = [...nonJokers].sort((a,b)=>suitOrder(a.suit)-suitOrder(b.suit)).map(c=>({card:c,represents:null}));
+  jokers.forEach((j,i)=>{
+    const label = missingSuits[i] ? refRank+missingSuits[i] : refRank+'?';
+    sorted.push({card:j, represents:label});
+  });
+  return sorted;
+}
+
+function renderMelds() {
+  const el = document.getElementById('melds-area');
+  if (melds.length === 0) {
+    el.innerHTML = `<span style="opacity:0.25;font-size:0.85rem;font-style:italic;padding:0.5rem;">Aucune combinaison posée</span>`;
+    return;
+  }
+  el.innerHTML = melds.map((m,mi)=>{
+    const typeLabel = isSuite(m.cards)?'Suite':(isBrelan(m.cards)?'Brelan':'⚠ Invalide');
+    const ownerLabel = m.owner === 'player' ? 'Vous' :
+      (aiPlayers[parseInt((m.owner||'ai0').replace('ai',''))]?.name || 'IA');
+    const isInvalid = !isValidMeld(m.cards);
+    const borderStyle = isInvalid ? 'border-color:#e07070;box-shadow:0 0 8px rgba(220,80,80,0.4);' : '';
+    // Trier les cartes pour l'affichage en plaçant les jokers à leur position logique
+    const displayCards = sortMeldForDisplay(m.cards);
+    if (reorganizeMode) {
+      return `<div class="meld-group" style="${borderStyle}" title="${typeLabel} · ${ownerLabel} — cliquez une carte pour la reprendre">
+        ${displayCards.map(({card,represents})=>`<div onclick="takeMeldCard(${mi},${m.cards.indexOf(card)})" title="Reprendre cette carte" style="cursor:grab;">${renderMeldCard(card, represents)}</div>`).join('')}
+      </div>`;
+    }
+    return `<div class="meld-group" onclick="selectMeldForExtension(${mi})" title="${typeLabel} · ${ownerLabel}">
+      ${displayCards.map(({card,represents})=>renderMeldCard(card, represents)).join('')}
+    </div>`;
+  }).join('');
+}
+
+function renderDeckCount() {
+  document.getElementById('hud-deck').textContent = deck.length;
+  const pileEl = document.getElementById('deck-pile');
+  pileEl.style.opacity = deck.length === 0 ? '0.3' : '1';
+  pileEl.style.cursor = (deck.length === 0 || hasDrawn) ? 'not-allowed' : 'pointer';
+}
+
+function updateButtons() {
+  const canAct = hasDrawn && phase === 'draw'; // phase reste 'draw' mais hasDrawn=true signifie action possible
+  // En réalité on gère via hasDrawn
+  const hasSel = selectedIndices.length > 0;
+  const canDo = hasDrawn;
+  const stagingActive = stagingMelds.length > 0;
+  
+  document.getElementById('btn-meld').disabled = !canDo || selectedIndices.length < 3 || stagingActive && playerHasMeld;
+  document.getElementById('btn-extend').disabled = !canDo || selectedIndices.length < 1 || melds.length === 0 || stagingActive;
+  document.getElementById('btn-reorganize').disabled = !canDo || melds.length === 0 || stagingActive || !playerHasMeld;
+  document.getElementById('btn-discard').disabled = !canDo || selectedIndices.length !== 1 || reorganizeMode || stagingActive;
+  document.getElementById('btn-rami').disabled = !canDo || reorganizeMode || stagingActive;
+}
+
+function setMessage(msg) {
+  document.getElementById('message-bar').textContent = msg;
+}
+
+// File d'attente pour les messages flottants (évite la superposition)
+let _floatQueue = [];
+let _floatTimer = null;
+
+function showFloat(msg) {
+  _floatQueue.push(msg);
+  if (!_floatTimer) _processFloatQueue();
+}
+
+function _processFloatQueue() {
+  if (_floatQueue.length === 0) { _floatTimer = null; return; }
+  const msg = _floatQueue.shift();
+  const el = document.createElement('div');
+  el.className = 'floating-msg';
+  el.textContent = msg;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 2800);
+  // Délai entre deux messages pour qu'ils ne se superposent pas
+  _floatTimer = setTimeout(_processFloatQueue, 1500);
+}
+
+// ==================== ACTIONS JOUEUR ====================
+function toggleSelect(idx) {
+  if (!hasDrawn) { setMessage('Piochez d\'abord une carte !'); return; }
+  const pos = selectedIndices.indexOf(idx);
+  if (pos === -1) selectedIndices.push(idx);
+  else selectedIndices.splice(pos, 1);
+  // Si exactement 1 carte sélectionnée et déjà posé, montrer les melds compatibles
+  if (selectedIndices.length === 1 && playerHasMeld && melds.length > 0) {
+    const card = playerHand[selectedIndices[0]];
+    highlightCompatibleMelds(card);
+    if (selectedMeldIndex === -1) setMessage('👆 Cliquez sur une combinaison sur la table pour y ajouter cette carte.');
+  } else {
+    renderMeldsHighlight(-1);
+  }
+  render();
+}
+
+function highlightCompatibleMelds(card) {
+  // Mettre en vert les melds où la carte peut aller, en rouge les autres
+  document.querySelectorAll('.meld-group').forEach((el, i) => {
+    const compatible = canExtend(melds[i], card) || findJokerToReplace(melds[i], card) !== -1;
+    el.classList.remove('highlight');
+    el.style.borderColor = compatible ? 'rgba(68,204,119,0.7)' : '';
+    el.style.boxShadow = compatible ? '0 0 8px rgba(68,204,119,0.3)' : '';
+  });
+}
+
+function drawFromDeck() {
+  if (hasDrawn) { setMessage('Vous avez déjà pioché ce tour.'); return; }
+  if (deck.length === 0) { reshuffleDeck(); if(deck.length===0){ setMessage('Le jeu est vide !'); return; } }
+  const card = deck.pop();
+  playerHand.push(card);
+  hasDrawn = true;
+  setMessage(`Vous avez pioché. Posez ou défaussez une carte.`);
+  showFloat(`🃏 +1 carte piochée`);
+  render();
+}
+
+function drawFromDiscard() {
+  if (hasDrawn) { setMessage('Vous avez déjà pioché ce tour.'); return; }
+  if (discardPile.length === 0) { setMessage('La défausse est vide.'); return; }
+  const card = discardPile.pop();
+  playerHand.push(card);
+  hasDrawn = true;
+  setMessage(`Vous prenez la défausse (${card.rank}${card.suit}). Posez ou défaussez.`);
+  showFloat(`✋ Pris la défausse`);
+  render();
+}
+
+function reshuffleDeck() {
+  if (discardPile.length <= 1) return;
+  const top = discardPile.pop();
+  deck = shuffle(discardPile);
+  discardPile = [top];
+  showFloat('🔄 Talon reconstitué');
+}
+
+function sortHand() {
+  playerHand.sort((a,b) => {
+    if (a.isJoker && b.isJoker) return 0;
+    if (a.isJoker) return 1; if (b.isJoker) return -1;
+    const si = suitOrder(a.suit) - suitOrder(b.suit);
+    return si !== 0 ? si : rankOrder(a) - rankOrder(b);
+  });
+  selectedIndices = [];
+  render();
+}
+
+function sortByValue() {
+  playerHand.sort((a,b) => rankOrder(a) - rankOrder(b));
+  selectedIndices = [];
+  render();
+}
+
+function sortAscending() {
+  // Groupe par couleur, puis consécutif
+  playerHand.sort((a,b) => {
+    if (a.isJoker) return 1; if (b.isJoker) return -1;
+    const si = suitOrder(a.suit) - suitOrder(b.suit);
+    return si !== 0 ? si : rankOrder(a) - rankOrder(b);
+  });
+  selectedIndices = [];
+  render();
+}
+
+// ==================== STAGING PREMIÈRE POSE ====================
+let stagingMelds = []; // [{cards:[...]}] — combinaisons en attente pour la 1re pose
+
+function proposeMeld() {
+  if (selectedIndices.length < 3) { setMessage('Sélectionnez au moins 3 cartes.'); return; }
+  const cards = selectedIndices.map(i=>playerHand[i]);
+  if (!isValidMeld(cards)) {
+    setMessage('❌ Combinaison invalide ! (brelan ou suite de 3+ cartes)');
+    showFloat('❌ Combinaison invalide');
+    return;
+  }
+
+  // Première pose : on passe par la zone de staging
+  if (!playerHasMeld) {
+    // Ajouter au staging
+    stagingMelds.push({cards: [...cards]});
+    // Retirer temporairement les cartes de la main
+    const sorted = [...selectedIndices].sort((a,b)=>b-a);
+    sorted.forEach(i=>playerHand.splice(i,1));
+    selectedIndices = [];
+    renderStagingArea();
+    render();
+    setMessage('✅ Combinaison ajoutée. Continuez d\'en ajouter ou validez la première pose.');
+    showFloat(`✅ ${isSuite(cards)?'Suite':'Brelan'} ajouté au staging`);
+    return;
+  }
+
+  // Pose libre (après première pose)
+  const sorted = [...selectedIndices].sort((a,b)=>b-a);
+  sorted.forEach(i=>playerHand.splice(i,1));
+  selectedIndices = [];
+  melds.push({cards, owner:'player'});
+  setMessage(`✅ Combinaison posée ! ${isSuite(cards)?'Suite':'Brelan'} de ${cards.length} cartes.`);
+  showFloat(`✅ ${isSuite(cards)?'Suite':'Brelan'} posé !`);
+  render();
+  checkWin();
+}
+
+function renderStagingArea() {
+  const area = document.getElementById('first-meld-staging');
+  const groupsEl = document.getElementById('staging-groups');
+  const condEl = document.getElementById('staging-conditions');
+  const confirmBtn = document.getElementById('btn-staging-confirm');
+
+  if (stagingMelds.length === 0) {
+    area.classList.remove('active');
+    return;
+  }
+
+  area.classList.add('active');
+
+  const totalPts = stagingMelds.reduce((s,m) => s + meldValue(m.cards), 0);
+  const hasNatural = stagingMelds.some(m => isSuite(m.cards) && !m.cards.some(c=>c.isJoker));
+  const ptsOk = totalPts >= FIRST_MELD_MIN;
+  const canConfirm = ptsOk && hasNatural;
+  confirmBtn.disabled = !canConfirm;
+
+  // Bloc conditions
+  const ptsHint = ptsOk ? '' : `<span class="cond-hint"> — il manque ${FIRST_MELD_MIN - totalPts} pts</span>`;
+  const natHint = hasNatural ? '' : `<span class="cond-hint"> — ajoutez une suite 3+ cartes sans joker</span>`;
+  condEl.innerHTML = `
+    <div class="cond-item ${ptsOk ? 'ok' : 'nok'}">
+      ${ptsOk ? '✅' : '❌'} ${totalPts} / ${FIRST_MELD_MIN} pts minimum${ptsHint}
+    </div>
+    <div class="cond-item ${hasNatural ? 'ok' : 'nok'}">
+      ${hasNatural ? '✅' : '❌'} Suite naturelle (sans joker)${natHint}
+    </div>`;
+
+  groupsEl.innerHTML = stagingMelds.map((m, mi) => {
+    const displayCards = sortMeldForDisplay(m.cards);
+    return `<div class="staging-group" onclick="removeStagingMeld(${mi})" title="Cliquer pour retirer cette combinaison">
+      ${displayCards.map(({card, represents}) => renderMeldCard(card, represents)).join('')}
+    </div>`;
+  }).join('');
+}
+
+function removeStagingMeld(mi) {
+  // Remettre les cartes en main
+  const cards = stagingMelds[mi].cards;
+  playerHand.push(...cards);
+  stagingMelds.splice(mi, 1);
+  renderStagingArea();
+  render();
+  setMessage('Combinaison retirée du staging et remise en main.');
+}
+
+function confirmFirstMeld() {
+  const totalPts = stagingMelds.reduce((s,m) => s + meldValue(m.cards), 0);
+  const hasNatural = stagingMelds.some(m => isSuite(m.cards) && !m.cards.some(c=>c.isJoker));
+
+  if (totalPts < FIRST_MELD_MIN) {
+    setMessage(`❌ Première pose : ${totalPts} pts — minimum ${FIRST_MELD_MIN} requis.`);
+    showFloat(`❌ ${totalPts} pts — minimum 51 requis`);
+    return;
+  }
+  if (!hasNatural) {
+    setMessage('❌ Première pose : une suite sans joker est obligatoire !');
+    showFloat('❌ Suite naturelle requise');
+    return;
+  }
+
+  // Valider : déplacer tous les melds du staging vers la table
+  for (const m of stagingMelds) {
+    melds.push({cards: m.cards, owner: 'player'});
+  }
+  stagingMelds = [];
+  playerHasMeld = true;
+
+  document.getElementById('first-meld-staging').classList.remove('active');
+  setMessage(`✅ Première pose validée ! (${totalPts} pts)`);
+  showFloat(`🎯 Première pose ! ${totalPts} pts`);
+  render();
+  checkWin();
+}
+
+function cancelFirstMeld() {
+  // Remettre toutes les cartes en main
+  for (const m of stagingMelds) {
+    playerHand.push(...m.cards);
+  }
+  stagingMelds = [];
+  document.getElementById('first-meld-staging').classList.remove('active');
+  setMessage('Première pose annulée. Toutes les cartes remises en main.');
+  render();
+}
+
+let selectedMeldIndex = -1;
+let reorganizeMode = false;
+let reorganizeSnapshot = null;
+
+function toggleReorganize() {
+  if (!reorganizeMode) {
+    if (!playerHasMeld) {
+      setMessage(`❌ Vous devez d'abord poser votre première combinaison (${FIRST_MELD_MIN} pts minimum) avant de pouvoir réorganiser la table.`);
+      return;
+    }
+    reorganizeSnapshot = {
+      melds: JSON.parse(JSON.stringify(melds)),
+      playerHand: JSON.parse(JSON.stringify(playerHand))
+    };
+    reorganizeMode = true;
+    document.getElementById('btn-reorganize').textContent = '✅ Valider réorg.';
+    document.getElementById('btn-reorganize').style.borderColor = '#44ff88';
+    document.getElementById('btn-reorganize').style.color = '#44ff88';
+    const bar = document.querySelector('.action-bar');
+    if (!document.getElementById('btn-cancel-reorg')) {
+      const btn = document.createElement('button');
+      btn.className = 'btn-action';
+      btn.id = 'btn-cancel-reorg';
+      btn.textContent = '↩ Annuler réorg.';
+      btn.onclick = cancelReorganize;
+      bar.appendChild(btn);
+    }
+    setMessage("🔀 Mode réorganisation : cliquez sur une carte d'un meld pour la reprendre en main.");
+    renderMelds();
+  } else {
+    validateReorganize();
+  }
+}
+
+function cancelReorganize() {
+  if (reorganizeSnapshot) {
+    melds = reorganizeSnapshot.melds;
+    playerHand = reorganizeSnapshot.playerHand;
+  }
+  exitReorganizeMode();
+  setMessage('↩ Réorganisation annulée.');
+  render();
+}
+
+function validateReorganize() {
+  const invalid = melds.filter(m => !isValidMeld(m.cards));
+  if (invalid.length > 0) {
+    setMessage(`❌ ${invalid.length} combinaison(s) invalide(s) sur table. Corrigez ou annulez.`);
+    showFloat('❌ Combinaisons invalides !');
+    return;
+  }
+  exitReorganizeMode();
+  reorganizeSnapshot = null;
+  setMessage('✅ Réorganisation validée !');
+  showFloat('✅ Table réorganisée !');
+  render();
+}
+
+function exitReorganizeMode() {
+  reorganizeMode = false;
+  const btn = document.getElementById('btn-reorganize');
+  btn.textContent = '🔀 Réorganiser';
+  btn.style.borderColor = '';
+  btn.style.color = '';
+  const cancelBtn = document.getElementById('btn-cancel-reorg');
+  if (cancelBtn) cancelBtn.remove();
+  renderMelds();
+}
+
+function takeMeldCard(meldIdx, cardIdx) {
+  if (!reorganizeMode || !hasDrawn) return;
+  const meld = melds[meldIdx];
+  const card = meld.cards.splice(cardIdx, 1)[0];
+  playerHand.push(card);
+  if (meld.cards.length === 0) melds.splice(meldIdx, 1);
+  setMessage('Carte reprise en main. Reposez-la dans une combinaison ou créez-en une nouvelle.');
+  renderPlayerHand();
+  renderMelds();
+}
+
+function selectMeldForExtension(mi) {
+  if (reorganizeMode) return;
+  if (!hasDrawn) return;
+  if (selectedMeldIndex === mi) {
+    selectedMeldIndex = -1;
+    // Rétablir la surbrillance de compatibilité si une carte est sélectionnée
+    if (selectedIndices.length === 1 && playerHasMeld) {
+      highlightCompatibleMelds(playerHand[selectedIndices[0]]);
+    } else {
+      clearMeldHighlights();
+    }
+    return;
+  }
+  selectedMeldIndex = mi;
+  clearMeldHighlights();
+  document.querySelectorAll('.meld-group')[mi]?.classList.add('highlight');
+  setMessage(`Combinaison sélectionnée. Choisissez la carte à y ajouter puis cliquez "Étendre".`);
+}
+
+function renderMeldsHighlight(hi) {
+  clearMeldHighlights();
+  if (hi >= 0) document.querySelectorAll('.meld-group')[hi]?.classList.add('highlight');
+}
+
+function clearMeldHighlights() {
+  document.querySelectorAll('.meld-group').forEach(el => {
+    el.classList.remove('highlight');
+    el.style.borderColor = '';
+    el.style.boxShadow = '';
+  });
+}
+
+function findJokerToReplace(meld, card) {
+  // Cherche si la carte posée peut remplacer un joker dans ce meld.
+  // Retourne l'index du joker dans meld.cards, ou -1 sinon.
+  if (card.isJoker) return -1;
+  const jokerIdx = meld.cards.findIndex(c=>c.isJoker);
+  if (jokerIdx === -1) return -1;
+  // Tester si le meld reste valide en remplaçant le joker par la vraie carte
+  const testCards = [...meld.cards];
+  testCards[jokerIdx] = card;
+  if (isValidMeld(testCards)) return jokerIdx;
+  return -1;
+}
+
+function extendMeld() {
+  if (selectedIndices.length === 0) { setMessage('Sélectionnez une carte à ajouter.'); return; }
+  if (melds.length === 0) { setMessage('Aucune combinaison sur la table.'); return; }
+  
+  const cardIdx = selectedIndices[0];
+  const card = playerHand[cardIdx];
+  
+  // Un meld cible doit être explicitement sélectionné (clic sur la combinaison)
+  const target = selectedMeldIndex;
+  
+  if (target === -1) {
+    setMessage('👆 Cliquez d\'abord sur la combinaison cible sur la table, puis sur "Étendre".');
+    showFloat('👆 Sélectionnez une combinaison sur la table');
+    return;
+  }
+
+  // Vérifier si on peut remplacer un joker
+  const jokerIdx = findJokerToReplace(melds[target], card);
+  if (jokerIdx !== -1) {
+    // Récupérer le joker et le mettre dans la main du joueur
+    const joker = melds[target].cards[jokerIdx];
+    melds[target].cards[jokerIdx] = card;
+    playerHand.splice(cardIdx, 1);
+    playerHand.push(joker);
+    selectedIndices = [];
+    selectedMeldIndex = -1;
+    clearMeldHighlights();
+    setMessage('♻️ Joker récupéré ! Il est de retour dans votre main.');
+    showFloat('♻️ Joker récupéré !');
+    render();
+    checkWin();
+    return;
+  }
+
+  if (!canExtend(melds[target], card)) { setMessage('❌ Cette carte ne peut pas étendre ce meld.'); return; }
+  
+  melds[target].cards.push(card);
+  playerHand.splice(cardIdx, 1);
+  selectedIndices = [];
+  selectedMeldIndex = -1;
+  clearMeldHighlights();
+  setMessage(`➕ Carte ajoutée à la combinaison !`);
+  showFloat('➕ Meld étendu !');
+  render();
+  checkWin();
+}
+
+function discardSelected() {
+  if (reorganizeMode) { setMessage('Validez ou annulez la réorganisation avant de défausser.'); return; }
+  if (selectedIndices.length !== 1) { setMessage('Sélectionnez exactement 1 carte à défausser.'); return; }
+  if (!hasDrawn) { setMessage('Piochez d\'abord.'); return; }
+  const idx = selectedIndices[0];
+  const card = playerHand.splice(idx, 1)[0];
+  discardPile.push(card);
+  selectedIndices = [];
+  hasDrawn = false;
+  selectedMeldIndex = -1;
+  clearMeldHighlights();
+  setMessage(`Défaussé : ${card.rank}${card.suit}. Tour des IAs...`);
+  render();
+
+  if (playerHand.length === 0) { endRound('player'); return; }
+
+  // Lancer la chaîne des IAs depuis la première
+  currentAiIdx = 0;
+  setTimeout(aiTurn, 800);
+}
+
+function checkRami() {
+  // RAMI : poser toute sa main valide d'un coup
+  // Vérifie si on peut poser toutes les cartes en combinaisons valides
+  const allValid = tryRami(playerHand);
+  if (!allValid) {
+    setMessage('❌ Vous ne pouvez pas faire Rami (cartes ne forment pas toutes des combinaisons valides).');
+    showFloat('❌ Pas de Rami possible');
+    return;
+  }
+  allValid.forEach(group=>melds.push({cards:group, owner:'player'}));
+  playerHand = [];
+  selectedIndices = [];
+  showFloat('⭐ RAMI !');
+  render();
+  endRound('player', true);
+}
+
+function tryRami(hand) {
+  // Tenter de diviser la main en groupes valides (backtracking simple)
+  if (hand.length === 0) return [];
+  // Générer toutes les combinaisons valides possibles parmi les cartes
+  const cards = [...hand];
+  const result = findMelds(cards, []);
+  return result;
+}
+
+function findMelds(remaining, found) {
+  if (remaining.length === 0) return found;
+  // Essayer toutes les combinaisons de 3+ cartes
+  const n = remaining.length;
+  for (let size = Math.min(n, 13); size >= 3; size--) {
+    for (let combo of combinations(remaining, size)) {
+      if (isValidMeld(combo)) {
+        const rest = remaining.filter(c=>!combo.includes(c));
+        const sub = findMelds(rest, [...found, combo]);
+        if (sub !== null && rest.length === 0) return sub;
+        if (sub !== null && sub.length > found.length) {
+          const r2 = findMelds(rest, [...found, combo]);
+          if (r2 !== null) return r2;
+        }
+      }
+    }
+  }
+  return remaining.length === 0 ? found : null;
+}
+
+function* combinations(arr, k) {
+  if (k > arr.length) return;
+  if (k === 1) { for (const x of arr) yield [x]; return; }
+  for (let i=0;i<=arr.length-k;i++) {
+    for (const rest of combinations(arr.slice(i+1), k-1)) {
+      yield [arr[i], ...rest];
+    }
+  }
+}
+
+// ==================== IA (VERSION AMÉLIORÉE) ====================
+
+/**
+ * Évalue le potentiel d'une main : retourne un score bas = bonne main.
+ * Tient compte des quasi-melds (2 cartes qui peuvent former un meld avec une 3e).
+ */
+function aiEvaluateHand(hand) {
+  // Trouver les meilleurs melds possibles et compter les cartes hors meld
+  const { bestMelds, leftover } = aiFindBestMeldSet(hand);
+  let score = leftover.reduce((s,c)=>s+cardValue(c),0);
+  // Bonus pour les quasi-melds dans les leftovers (paires, 2 cartes consécutives même couleur)
+  score -= aiQuasiMeldBonus(leftover) * 2;
+  return score;
+}
+
+/** Trouve la meilleure répartition de melds pour minimiser les points en main */
+function aiFindBestMeldSet(hand) {
+  const cards = [...hand];
+  // Génère tous les melds valides possibles parmi les cartes
+  const allPossible = [];
+  for (let size = Math.min(cards.length, 13); size >= 3; size--) {
+    for (const combo of combinations(cards, size)) {
+      if (isValidMeld(combo)) allPossible.push(combo);
+    }
+  }
+
+  // Tri : priorité aux gros melds (plus de cartes = moins de leftovers)
+  allPossible.sort((a,b) => b.length - a.length || meldValue(b) - meldValue(a));
+
+  // Greedy : prendre les melds sans conflits de cartes
+  const used = new Set();
+  const bestMelds = [];
+  for (const meld of allPossible) {
+    if (meld.every(c => !used.has(c.id))) {
+      bestMelds.push(meld);
+      meld.forEach(c => used.add(c.id));
+    }
+  }
+  const leftover = cards.filter(c => !used.has(c.id));
+  return { bestMelds, leftover };
+}
+
+/** Bonus pour les paires, séquences partielles et triples proches d'un meld */
+function aiQuasiMeldBonus(cards) {
+  let bonus = 0;
+  // Paires et séquences à 2 cartes
+  for (let i = 0; i < cards.length; i++) {
+    for (let j = i+1; j < cards.length; j++) {
+      const a = cards[i], b = cards[j];
+      if (a.isJoker || b.isJoker) { bonus += 3; continue; }
+      // Paire (même rang, enseignes différentes) → potentiel brelan
+      if (a.rank === b.rank && a.suit !== b.suit) bonus += 4;
+      // Deux cartes consécutives même couleur → potentiel suite
+      if (a.suit === b.suit && Math.abs(rankOrder(a)-rankOrder(b)) <= 2) bonus += 3;
+    }
+  }
+  // Bonus supplémentaire pour les triplets quasi-melds (3 cartes à 1 carte d'un meld valide)
+  for (let i = 0; i < cards.length; i++) {
+    for (let j = i+1; j < cards.length; j++) {
+      for (let k = j+1; k < cards.length; k++) {
+        const triple = [cards[i], cards[j], cards[k]];
+        if (triple.some(c => c.isJoker)) continue;
+        // Triple paire (3 cartes même rang) → brelan complet si valide
+        if (isValidMeld(triple)) {
+          bonus += 10; // déjà un meld, sera comptabilisé ailleurs
+        } else {
+          // Même enseigne avec 1 écart : potentiellement une suite à 1 carte près
+          const sameS = triple.every(c => c.suit === triple[0].suit);
+          if (sameS) {
+            const orders = triple.map(rankOrder).sort((a,b)=>a-b);
+            if (orders[2] - orders[0] <= 3) bonus += 6; // suite presque complète
+          }
+          // Même rang 3/4 enseignes → brelan presque complet
+          if (triple.every(c => c.rank === triple[0].rank)) bonus += 6;
+        }
+      }
+    }
+  }
+  return bonus;
+}
+
+/**
+ * Décide si l'IA doit prendre la carte de la défausse.
+ * Logique améliorée : vérifie non seulement le score global
+ * mais aussi si la carte complète un meld ou un quasi-meld.
+ */
+function aiWantCard(card) {
+  if (card.isJoker) return true;
+  const hand = curAI().hand;
+
+  // Vérification directe : la carte complète-t-elle un meld avec des cartes en main ?
+  for (let size = 2; size <= 4; size++) {
+    for (const combo of combinations(hand, size)) {
+      const withCard = [...combo, card];
+      if (withCard.length >= 3 && isValidMeld(withCard)) {
+        dbLog(`${curAI().name} veut ${cardStr(card)} → complète un meld !`, 'draw');
+        return true;
+      }
+    }
+  }
+
+  // La carte s'insère-t-elle dans un quasi-meld (paire ou séquence partielle) ?
+  for (const c of hand) {
+    if (c.isJoker) continue;
+    // Paire → potentiel brelan
+    if (c.rank === card.rank && c.suit !== card.suit) return true;
+    // Séquence partielle même enseigne (écart ≤ 2) → potentiel suite
+    if (c.suit === card.suit && Math.abs(rankOrder(c)-rankOrder(card)) <= 2) return true;
+  }
+
+  // Fallback : évaluation par score global (seuil un peu plus strict)
+  const currentScore = aiEvaluateHand(hand);
+  const withCard = aiEvaluateHand([...hand, card]);
+  return withCard < currentScore - 5;
+}
+
+/**
+ * L'IA joue ses melds en respectant la règle de première pose (51pts + tierce franche).
+ */
+function aiPlayMelds() {
+  if (!curAI().hasMeld) {
+    aiTryFirstMeld();
+  } else {
+    aiFreePlay();
+  }
+}
+
+function aiTryFirstMeld() {
+  const hand = curAI().hand;
+
+  // Collecter toutes les suites naturelles de taille 3+ (sans joker)
+  // On limite à taille 3-6 pour éviter l'explosion combinatoire
+  const naturalSuites = [];
+  for (let size = 6; size >= 3; size--) {
+    for (const combo of combinations(hand, size)) {
+      if (isSuite(combo) && !combo.some(c => c.isJoker)) {
+        // Dédoublonner : ne garder que si aucune suite existante ne la contient
+        const ids = combo.map(c => c.id).sort().join(',');
+        if (!naturalSuites.some(s => s._key === ids)) {
+          combo._key = ids;
+          naturalSuites.push(combo);
+        }
+      }
+    }
+  }
+
+  if (naturalSuites.length === 0) {
+    dbLog(`${curAI().name} : 0 suite naturelle → ne peut pas ouvrir`, 'pass');
+    return;
+  }
+
+  // Pour chaque suite naturelle, chercher rapidement des melds complémentaires
+  for (const suite of naturalSuites) {
+    const suiteVal = meldValue(suite);
+    const remaining = hand.filter(c => !suite.includes(c));
+
+    // Si la suite seule suffit
+    if (suiteVal >= FIRST_MELD_MIN) {
+      dbLog(`${curAI().name} ouvre avec suite ${suite.map(cardStr).join('')} (${suiteVal}pts)`, 'pose');
+      _aiPoseFirstMeld([suite]);
+      return;
+    }
+
+    // Chercher des brelans/suites dans les cartes restantes pour compléter
+    const needed = FIRST_MELD_MIN - suiteVal;
+    const extraMelds = aiFindMeldsForTarget(remaining, needed);
+    if (extraMelds !== null) {
+      dbLog(`${curAI().name} ouvre suite ${suite.map(cardStr).join('')}(${suiteVal}pts) + extras → total ${suiteVal + extraMelds.reduce((s,m)=>s+meldValue(m),0)}pts`, 'pose');
+      _aiPoseFirstMeld([suite, ...extraMelds]);
+      return;
+    }
+    dbLog(`${curAI().name} : suite ${suite.map(cardStr).join('')}(${suiteVal}pts) mais manque ${needed}pts → passe`, 'pass');
+  }
+}
+
+/**
+ * Cherche un ensemble de melds valides parmi `cards` dont la valeur totale >= target.
+ * Retourne le tableau de melds trouvés, ou null si impossible.
+ * Algorithme greedy rapide (pas de backtracking complet).
+ */
+function aiFindMeldsForTarget(cards, target) {
+  // Générer tous les melds valides de taille 3-4 (rapide)
+  const allMelds = [];
+  for (let size = 4; size >= 3; size--) {
+    for (const combo of combinations(cards, size)) {
+      if (isValidMeld(combo)) allMelds.push(combo);
+    }
+  }
+
+  // Trier par valeur décroissante
+  allMelds.sort((a, b) => meldValue(b) - meldValue(a));
+
+  // Greedy : prendre les melds les plus valables sans conflit
+  const used = new Set();
+  const chosen = [];
+  let total = 0;
+
+  for (const meld of allMelds) {
+    if (meld.every(c => !used.has(c.id))) {
+      chosen.push(meld);
+      meld.forEach(c => used.add(c.id));
+      total += meldValue(meld);
+      if (total >= target) return chosen;
+    }
+  }
+
+  return null; // pas assez de points trouvés
+}
+
+function _aiPoseFirstMeld(meldList) {
+  const ai = aiPlayers[currentAiIdx];
+  let totalPts = 0;
+  for (const meld of meldList) {
+    meld.forEach(c => { const i = ai.hand.indexOf(c); if(i!==-1) ai.hand.splice(i,1); });
+    melds.push({cards:[...meld], owner:`ai${currentAiIdx}`});
+    totalPts += meldValue(meld);
+  }
+  const nbMelds = meldList.length;
+  showFloat(`${ai.name} pose ${nbMelds} combinaison${nbMelds>1?'s':''} (${totalPts} pts)`);
+  ai.hasMeld = true;
+}
+
+function aiFreePlay() {
+  const ai = aiPlayers[currentAiIdx];
+  let changed = true;
+  let count = 0;
+  while (changed) {
+    changed = false;
+    const { bestMelds } = aiFindBestMeldSet(ai.hand);
+    for (const meld of bestMelds) {
+      if (meld.every(c => ai.hand.includes(c))) {
+        meld.forEach(c => { const i = ai.hand.indexOf(c); if(i!==-1) ai.hand.splice(i,1); });
+        melds.push({cards:[...meld], owner:`ai${currentAiIdx}`});
+        count++;
+        changed = true;
+        break;
+      }
+    }
+  }
+  if (count > 0) {
+    showFloat(`${ai.name} pose ${count} combinaison${count>1?'s':''}`);
+  }
+}
+
+/**
+ * Réorganisation complète de la table par l'IA.
+ *
+ * Stratégie en 4 passes successivement répétées jusqu'à stabilisation :
+ *
+ * Passe 1 — Extension simple : ajouter une carte de la main à un meld existant.
+ *
+ * Passe 2 — Récupération de joker (remplacement direct) :
+ *   L'IA a la vraie carte → elle remplace le joker dans le meld.
+ *   Le joker récupéré est immédiatement réutilisé (pas mis en main du joueur).
+ *
+ * Passe 3 — Extraction en bout / fractionnement :
+ *   - Si un meld a ≥ 4 cartes, l'IA peut prélever la carte de début ou de fin
+ *     à condition que le meld restant soit encore valide (≥ 3 cartes valides).
+ *   - Si un meld long peut être scindé en deux melds valides, l'IA évalue si
+ *     cela lui permet de créer un nouveau meld avec des cartes en main.
+ *   Les cartes prélevées alimentent directement la construction de melds,
+ *   elles ne transitent JAMAIS par la main du joueur humain.
+ *
+ * Passe 4 — Création de nouveaux melds avec le pool disponible (main IA + cartes
+ *   récupérées des passes précédentes), puis pose sur table.
+ *
+ * La fonction travaille sur un pool interne (`pool`) qui fusionne la main de l'IA
+ * et les cartes libérées de la table. À la fin, ce qui n'a pas pu être posé
+ * retourne dans la main de l'IA.
+ */
+function aiExtendMelds() {
+  const ai = curAI();
+
+  // Compteurs pour résumer les actions (évite les bulles répétées)
+  let countExtend = 0;
+  let countJokerRecover = 0;
+  let countNewMeld = 0;
+
+  // Pool de travail : cartes disponibles pour l'IA (main + futures récupérations)
+  let pool = [...ai.hand];
+  ai.hand = [];
+
+  let globalChanged = true;
+  let iterations = 0;
+
+  while (globalChanged && iterations++ < 20) {
+    globalChanged = false;
+
+    // --- Passe 1 : Extension simple (carte du pool → bout d'un meld existant) ---
+    for (let pi = pool.length - 1; pi >= 0; pi--) {
+      const card = pool[pi];
+      for (const meld of melds) {
+        if (canExtend(meld, card)) {
+          meld.cards.push(card);
+          pool.splice(pi, 1);
+          dbLog(`${ai.name} étend meld avec ${cardStr(card)}`, 'pose');
+          countExtend++;
+          globalChanged = true;
+          break;
+        }
+      }
+      if (globalChanged) break;
+    }
+    if (globalChanged) continue;
+
+    // --- Passe 2 : Remplacement de joker (carte du pool remplace un joker dans un meld) ---
+    for (let pi = pool.length - 1; pi >= 0; pi--) {
+      const card = pool[pi];
+      if (card.isJoker) continue;
+      for (const meld of melds) {
+        // Chercher tous les jokers dans ce meld (peut en avoir plusieurs)
+        for (let ji = 0; ji < meld.cards.length; ji++) {
+          if (!meld.cards[ji].isJoker) continue;
+          const testCards = [...meld.cards];
+          testCards[ji] = card;
+          if (isValidMeld(testCards)) {
+            const recovered = meld.cards[ji]; // le joker
+            meld.cards[ji] = card;
+            pool.splice(pi, 1);
+            pool.push(recovered); // joker réinjecté dans le pool, pas dans la main du joueur
+            dbLog(`${ai.name} remplace joker dans meld par ${cardStr(card)}, joker récupéré`, 'pose');
+            countJokerRecover++;
+            globalChanged = true;
+            break;
+          }
+        }
+        if (globalChanged) break;
+      }
+      if (globalChanged) break;
+    }
+    if (globalChanged) continue;
+
+    // --- Passe 3a : Prélèvement en bout d'un meld long (≥ 4 cartes) ---
+    // On cherche si retirer le début ou la fin d'un meld laisse un meld valide
+    // ET si la carte prélevée améliore le pool (peut former un nouveau meld)
+    for (let mi = 0; mi < melds.length; mi++) {
+      const meld = melds[mi];
+      if (meld.cards.length < 4) continue;
+
+      // Trier les cartes du meld pour identifier début/fin (pertinent pour les suites)
+      const sorted = _sortMeldCards(meld.cards);
+
+      // Tester retrait de chaque extrémité
+      for (const endIdx of [0, sorted.length - 1]) {
+        const candidate = sorted[endIdx];
+        const remaining = sorted.filter((_, i) => i !== endIdx);
+        if (!isValidMeld(remaining)) continue;
+
+        // Vérifier si candidate + pool permet un nouveau meld
+        const testPool = [...pool, candidate];
+        const { bestMelds } = aiFindBestMeldSet(testPool);
+        const wouldFormMeld = bestMelds.some(m => m.some(c => c.id === candidate.id));
+        if (!wouldFormMeld) continue;
+
+        // Appliquer : retirer la carte du meld, l'injecter dans le pool
+        meld.cards = remaining;
+        pool.push(candidate);
+        dbLog(`${ai.name} prélève ${cardStr(candidate)} en bout de meld`, 'pose');
+        globalChanged = true;
+        break;
+      }
+      if (globalChanged) break;
+    }
+    if (globalChanged) continue;
+
+    // --- Passe 3b : Fractionnement d'un meld long en deux melds valides ---
+    // Uniquement si ça libère des cartes utiles pour former un meld avec le pool
+    for (let mi = 0; mi < melds.length; mi++) {
+      const meld = melds[mi];
+      if (meld.cards.length < 6) continue; // fractionnement intéressant à partir de 6
+
+      const sorted = _sortMeldCards(meld.cards);
+      const n = sorted.length;
+
+      // Tenter toutes les scissions en deux parties
+      for (let cut = 3; cut <= n - 3; cut++) {
+        const part1 = sorted.slice(0, cut);
+        const part2 = sorted.slice(cut);
+        if (!isValidMeld(part1) || !isValidMeld(part2)) continue;
+
+        // Vérifier si le fractionnement libère une carte pour un nouveau meld
+        // (dans ce cas les deux parties restent sur table, pas de carte libérée directement)
+        // → utile surtout pour libérer un joker coincé au milieu
+        const jokersInMeld = meld.cards.filter(c => c.isJoker).length;
+        const jokersP1 = part1.filter(c => c.isJoker).length;
+        const jokersP2 = part2.filter(c => c.isJoker).length;
+        if (jokersInMeld === 0) continue; // pas de joker à libérer, inutile de fractionner
+
+        // Chercher si on peut remplacer le joker dans l'une des parties avec une carte du pool
+        let improved = false;
+        for (const part of [part1, part2]) {
+          for (let ji = 0; ji < part.length; ji++) {
+            if (!part[ji].isJoker) continue;
+            for (let pi = 0; pi < pool.length; pi++) {
+              const pc = pool[pi];
+              if (pc.isJoker) continue;
+              const test = [...part];
+              test[ji] = pc;
+              if (isValidMeld(test)) {
+                improved = true;
+                break;
+              }
+            }
+            if (improved) break;
+          }
+          if (improved) break;
+        }
+        if (!improved) continue;
+
+        // Appliquer le fractionnement
+        melds[mi] = { cards: part1, owner: meld.owner };
+        melds.push({ cards: part2, owner: meld.owner });
+        dbLog(`${ai.name} fractionne un meld long (${n} cartes → ${cut}+${n-cut})`, 'pose');
+        globalChanged = true;
+        break;
+      }
+      if (globalChanged) break;
+    }
+    if (globalChanged) continue;
+
+    // --- Passe 4 : Poser de nouveaux melds depuis le pool ---
+    {
+      const { bestMelds } = aiFindBestMeldSet(pool);
+      let posed = false;
+      for (const meld of bestMelds) {
+        if (meld.every(c => pool.some(pc => pc.id === c.id))) {
+          meld.forEach(c => {
+            const idx = pool.findIndex(pc => pc.id === c.id);
+            if (idx !== -1) pool.splice(idx, 1);
+          });
+          melds.push({ cards: [...meld], owner: `ai${currentAiIdx}` });
+          dbLog(`${ai.name} pose nouveau meld : ${meld.map(cardStr).join('')}`, 'pose');
+          countNewMeld++;
+          posed = true;
+          globalChanged = true;
+          break;
+        }
+      }
+    }
+  }
+
+  // Remettre ce qui reste du pool dans la main de l'IA
+  ai.hand = pool;
+
+  // Nettoyer les melds vides ou devenus invalides (sécurité)
+  melds = melds.filter(m => m.cards.length >= 3 && isValidMeld(m.cards));
+
+  // Résumé unique des actions effectuées (évite les bulles répétées)
+  const summaryParts = [];
+  if (countExtend > 0) summaryParts.push(`étend ${countExtend} carte${countExtend>1?'s':''}`);
+  if (countJokerRecover > 0) summaryParts.push(`récupère ${countJokerRecover} joker${countJokerRecover>1?'s':''}`);
+  if (countNewMeld > 0) summaryParts.push(`pose ${countNewMeld} nouveau${countNewMeld>1?'x':''} meld${countNewMeld>1?'s':''}`);
+  if (summaryParts.length > 0) {
+    showFloat(`${ai.name} : ${summaryParts.join(', ')}`);
+  }
+}
+
+/**
+ * Trie les cartes d'un meld pour avoir l'ordre logique
+ * (suite : ordre croissant ; brelan : non-jokers d'abord)
+ */
+function _sortMeldCards(cards) {
+  const nonJokers = cards.filter(c => !c.isJoker);
+  if (nonJokers.length === 0) return [...cards];
+  // Brelan : ordre quelconque (jokers à la fin)
+  if (isBrelan(cards)) {
+    return [...nonJokers, ...cards.filter(c => c.isJoker)];
+  }
+  // Suite : ordre par rang
+  const sorted = [...cards].sort((a, b) => {
+    if (a.isJoker && b.isJoker) return 0;
+    if (a.isJoker) return 1;
+    if (b.isJoker) return -1;
+    return rankOrder(a) - rankOrder(b);
+  });
+  return sorted;
+}
+
+/**
+ * Choisit la carte à défausser avec une logique stratégique améliorée.
+ * Critères (par ordre de priorité) :
+ *  1. Ne jamais défausser un joker sauf si aucune autre carte disponible
+ *  2. Préférer défausser un doublon strict (même rang + même enseigne)
+ *  3. Évaluer le gain réel de chaque retrait : handScore sans cette carte
+ *     avec pénalité si la carte participe à une quasi-meld (paire ou séquence partielle)
+ *  4. En cas d'égalité, défausser la carte de plus haute valeur isolée
+ */
+function aiFindWorstCard() {
+  const hand = curAI().hand;
+  if (hand.length === 0) return 0;
+
+  // --- Calcul des participations quasi-meld pour chaque carte ---
+  // participation[i] = nombre de quasi-melds (paires/séquences) auxquels la carte i participe
+  const participation = new Array(hand.length).fill(0);
+  for (let i = 0; i < hand.length; i++) {
+    for (let j = i+1; j < hand.length; j++) {
+      const a = hand[i], b = hand[j];
+      if (a.isJoker || b.isJoker) {
+        // Le joker est utile partout, on ne touche pas à sa participation ici
+        continue;
+      }
+      // Paire : même rang, enseignes différentes → potentiel brelan
+      if (a.rank === b.rank && a.suit !== b.suit) {
+        participation[i]++;
+        participation[j]++;
+      }
+      // Séquence partielle : même enseigne, écart ≤ 2 → potentiel suite
+      if (a.suit === b.suit && Math.abs(rankOrder(a)-rankOrder(b)) <= 2) {
+        participation[i]++;
+        participation[j]++;
+      }
+    }
+  }
+
+  // --- Détection des doublons stricts (même rang + même enseigne, double jeu) ---
+  // Un doublon strict peut être défaussé sans perte stratégique (on garde l'autre)
+  const rankSuitCount = {};
+  for (const c of hand) {
+    if (c.isJoker) continue;
+    const key = c.rank + c.suit;
+    rankSuitCount[key] = (rankSuitCount[key]||0) + 1;
+  }
+  const isDuplicate = hand.map(c => !c.isJoker && (rankSuitCount[c.rank+c.suit]||0) >= 2);
+
+  // --- Score de défaussabilité pour chaque carte ---
+  // Score BAS = bonne carte à garder ; Score HAUT = bonne carte à défausser
+  let worstIdx = -1;
+  let worstScore = -Infinity;
+
+  for (let i = 0; i < hand.length; i++) {
+    const c = hand[i];
+    if (c.isJoker) continue;
+
+    const handWithout = hand.filter((_,j) => j !== i);
+    const handScoreWithout = aiEvaluateHand(handWithout);
+
+    // Base : gain obtenu en retirant cette carte (plus c'est grand, mieux c'est de la retirer)
+    // On utilise le gain = (score_avec - score_sans) → retirer cette carte AMÉLIORE la main si positif
+    const currentHandScore = aiEvaluateHand(hand);
+    let discardScore = currentHandScore - handScoreWithout; // positif = bénéfique de la retirer
+
+    // Bonus fort si doublon strict : on peut se débarrasser d'un exemplaire
+    if (isDuplicate[i]) discardScore += 8;
+
+    // Pénalité si la carte participe à des quasi-melds : la garder vaut quelque chose
+    discardScore -= participation[i] * 3;
+
+    // Pénalité supplémentaire si la carte participe à un meld complet potentiel (dans bestMelds)
+    const { bestMelds } = aiFindBestMeldSet(hand);
+    const isInMeld = bestMelds.some(m => m.some(mc => mc.id === c.id));
+    if (isInMeld) discardScore -= 20; // protéger fortement les cartes dans des melds réels
+
+    // En cas d'égalité parfaite, favoriser la défausse de la carte la plus chère (moins de malus)
+    // mais seulement si elle n'est pas dans un quasi-meld
+    if (participation[i] === 0 && !isInMeld) discardScore += cardValue(c) * 0.1;
+
+    dbLog && dbLog(`  défausse eval ${cardStr(c)}: gain=${discardScore.toFixed(1)} (part=${participation[i]}, dup=${isDuplicate[i]}, inMeld=${isInMeld})`, '');
+
+    if (discardScore > worstScore) {
+      worstScore = discardScore;
+      worstIdx = i;
+    }
+  }
+
+  // Fallback : si toutes les cartes sont des jokers (très rare)
+  if (worstIdx === -1) worstIdx = 0;
+  return worstIdx;
+}
+
+function aiTurn() {
+  if (reorganizeMode) {
+    // Sécurité : le mode réorganisation ne doit jamais être actif pendant le tour des IA
+    cancelReorganize();
+  }
+  const ai = aiPlayers[currentAiIdx];
+
+  // 1. Piocher
+  let drewDiscard = false;
+  if (discardPile.length > 0) {
+    const top = discardPile[discardPile.length-1];
+    if (aiWantCard(top)) {
+      ai.hand.push(discardPile.pop());
+      drewDiscard = true;
+      dbLog(`${ai.name} prend la défausse : ${cardStr(top)}`, 'draw');
+    }
+  }
+  if (!drewDiscard) {
+    if (deck.length === 0) reshuffleDeck();
+    if (deck.length > 0) {
+      const drawn = deck[deck.length-1];
+      ai.hand.push(deck.pop());
+      dbLog(`${ai.name} pioche (${deck.length} restantes) → ${cardStr(drawn)}`, 'draw');
+    }
+  }
+  dbLog(`${ai.name} main (${ai.hand.length}) : ${ai.hand.map(cardStr).join(' ')} | score=${aiEvaluateHand(ai.hand)}`);
+
+  // 2. Poser des combinaisons (ouverture ou pose libre)
+  aiPlayMelds();
+
+  // 3. Réorganiser la table + étendre — UNIQUEMENT après ouverture
+  //    Avant l'ouverture, l'IA ne peut pas toucher aux cartes sur la table.
+  if (ai.hasMeld && melds.length > 0) aiExtendMelds();
+
+  // 4. Rami Sec ou Rami
+  if (!ai.hasMeld) {
+    const allMelds = tryRami(ai.hand);
+    if (allMelds) {
+      const totalVal = allMelds.reduce((s,m)=>s+meldValue(m),0);
+      const hasNat = allMelds.some(m=>isSuite(m)&&!m.some(c=>c.isJoker));
+      if (totalVal >= FIRST_MELD_MIN && hasNat) {
+        allMelds.forEach(m=>{ m.forEach(c=>{const i=ai.hand.indexOf(c);if(i!==-1)ai.hand.splice(i,1);}); melds.push({cards:[...m],owner:`ai${currentAiIdx}`}); });
+        ai.hasMeld = true;
+        ai.hand = [];
+        showFloat(`${ai.name} : RAMI SEC !`);
+        render();
+        endRound(`ai${currentAiIdx}`, true);
+        return;
+      }
+    }
+  } else {
+    const allMelds = tryRami(ai.hand);
+    if (allMelds) {
+      allMelds.forEach(m=>{ m.forEach(c=>{const i=ai.hand.indexOf(c);if(i!==-1)ai.hand.splice(i,1);}); melds.push({cards:[...m],owner:`ai${currentAiIdx}`}); });
+      ai.hand = [];
+      showFloat(`${ai.name} : RAMI !`);
+      render();
+      endRound(`ai${currentAiIdx}`, false);
+      return;
+    }
+  }
+
+  // 5. Défausser la pire carte
+  if (ai.hand.length > 0) {
+    const discardIdx = aiFindWorstCard();
+    const discarded = ai.hand[discardIdx];
+    dbLog(`${ai.name} défausse : ${cardStr(discarded)}`, 'discard');
+    discardPile.push(ai.hand.splice(discardIdx, 1)[0]);
+  }
+
+  render();
+  if (ai.hand.length === 0) { endRound(`ai${currentAiIdx}`); return; }
+
+  // Passer au prochain joueur
+  nextTurn();
+}
+
+function nextTurn() {
+  // Après le joueur c'est ai0, ai1, ai2..., puis retour joueur
+  // currentAiIdx === -1 signifie c'est le tour du joueur
+  if (currentAiIdx < aiPlayers.length - 1) {
+    // Encore des IAs à jouer
+    currentAiIdx++;
+    const ai = aiPlayers[currentAiIdx];
+    setMessage(`Tour de ${ai.name}...`);
+    render();
+    setTimeout(aiTurn, 900);
+  } else {
+    // Tous les IAs ont joué → retour au joueur
+    currentAiIdx = 0; // reset pour le prochain cycle
+    hasDrawn = false;
+    setMessage('À votre tour — Piochez une carte.');
+    render();
+  }
+}
+
+// ==================== FIN DE MANCHE ====================
+function checkWin() {
+  if (playerHand.length === 0) endRound('player');
+}
+
+function endRound(winner, isRami=false) {
+  function handPenalty(hand, hasMeld) {
+    if (!hasMeld) return 100;
+    return hand.reduce((s,c)=>s+cardValue(c),0);
+  }
+
+  let playerPenalty = handPenalty(playerHand, playerHasMeld);
+  const aiPenalties = aiPlayers.map((ai,i) => handPenalty(ai.hand, ai.hasMeld));
+
+  if (isRami) {
+    if (winner === 'player') {
+      aiPenalties.forEach((_,i) => aiPenalties[i] *= 2);
+    } else {
+      playerPenalty *= 2;
+      aiPenalties.forEach((_,i) => { if (`ai${i}` !== winner) aiPenalties[i] *= 2; });
+    }
+  }
+
+  // Accumuler malus des perdants
+  if (winner !== 'player') scores.player += playerPenalty;
+  aiPlayers.forEach((_, i) => {
+    if (winner !== `ai${i}`) scores[`ai${i}`] += aiPenalties[i];
+  });
+
+  updateScoreDisplay();
+
+  const winnerName = winner === 'player' ? 'Vous' : aiPlayers[parseInt(winner.replace('ai',''))].name;
+  const ramiLabel = isRami ? ' (Rami Sec ×2 !)' : '';
+
+  document.getElementById('modal-title').textContent =
+    winner === 'player' ? (isRami ? '⭐ RAMI SEC !' : '🏆 Victoire !') : `${winnerName} gagne !`;
+
+  // Résumé des pénalités
+  const lines = [];
+  if (winner !== 'player') lines.push(`Vous : <strong>+${playerPenalty} pts</strong> malus`);
+  aiPlayers.forEach((ai, i) => {
+    if (winner !== `ai${i}`) lines.push(`${ai.name.replace('🤖 ','')} : <strong>+${aiPenalties[i]} pts</strong> malus`);
+  });
+  const ramiLine = isRami ? `<br><span style="color:var(--gold);font-style:italic;">⭐ Rami Sec — malus ×2 !</span>` : '';
+  document.getElementById('modal-subtitle').innerHTML = lines.join('<br>') + ramiLine;
+
+  document.getElementById('modal-end').classList.add('show');
+}
+</script>
+</body>
+</html>
