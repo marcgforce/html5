@@ -1,7 +1,6 @@
-le jeu du scrable en français, contre l'ordinateur en version html, 2 versions, une version uniquement desktop 
-et la possibilité de changer le dictionnaire pour utiliser une autre langue
-
-une version embeded et mobile qui permet de jouer sur smartphone sans besoin de conexion, par conte le dictionnaire est 
-compris dans le fichier, les mots sont tirés de l'officiel du scrabble 2021
-
-un jeu de belote solo conte la machine avec un mode debug pour apprendre a jouer ou voir le jeu de l'adversaire
+Plusieurs petits jeux devellopés en HTML5, a titre d'exemple
+- jeu de Rami selon les regles officielles
+- jeu de belote coinchée
+- jeu de scrabble avec ou sans dictionnaire intégré (français ODS)
+- jeu d'echecs contre l'ordinateur avec plusieurs niveaux de difficultés et aide aux coups
+- un jeu de course de bille sur circuit avec terrain éditable
